@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-O3DE (Open 3D Engine) Setup Automation Script
-Automates the installation and project setup process for O3DE on Windows
+O3DE (Open 3D Engine) Setup Automation Script - Clean Install Version
+Nukes existing installations and does a fresh Git clone setup
 """
 
 import subprocess
@@ -97,27 +97,129 @@ class O3DESetup:
         confirm = input("\nProceed with these settings? (y/n): ").strip().lower()
         return confirm == 'y'
     
-    def clone_repo(self):
-        """Clone O3DE repository if it doesn't exist"""
-        if self.o3de_source.exists():
-            print(f"\n✓ O3DE source already exists at {self.o3de_source}")
-            return True
-        
+    def nuke_existing_installations(self):
+        """Clean up any existing O3DE installations"""
         print("\n" + "=" * 60)
-        print("Cloning O3DE Repository...")
+        print("Cleaning Up Existing Installations...")
         print("=" * 60)
-        print("This may take a while due to large files...")
+        
+        paths_to_check = [
+            self.o3de_source,
+            Path("C:\\O3DE"),  # Common alternate location
+            self.build_path,
+        ]
+        
+        cleaned_something = False
+        
+        for path in paths_to_check:
+            if path.exists():
+                print(f"\n⚠ Found existing directory: {path}")
+                confirm = input(f"  Delete this directory? (y/n): ").strip().lower()
+                
+                if confirm == 'y':
+                    print(f"  Deleting {path}...")
+                    try:
+                        shutil.rmtree(path, ignore_errors=True)
+                        print(f"  ✓ Deleted {path}")
+                        cleaned_something = True
+                    except Exception as e:
+                        print(f"  ✗ Failed to delete {path}: {e}")
+                        print(f"  Please manually delete this folder and try again.")
+                        return False
+                else:
+                    print(f"  Skipping {path}")
+        
+        if not cleaned_something:
+            print("\n✓ No existing installations found - clean slate!")
+        else:
+            print("\n✓ Cleanup complete!")
+        
+        return True
+    
+    def clone_repo(self):
+        """Clone O3DE repository with Git LFS"""
+        print("\n" + "=" * 60)
+        print("Cloning O3DE Repository (Fresh Git Clone)...")
+        print("=" * 60)
+        print("This will take a while - O3DE is several GB...")
+        print("Grab a coffee! ☕\n")
+        
+        if self.o3de_source.exists():
+            print(f"⚠ Directory {self.o3de_source} still exists!")
+            print("Please delete it manually or choose a different path.")
+            return False
+        
+        # Create parent directory if needed
+        self.o3de_source.parent.mkdir(parents=True, exist_ok=True)
         
         try:
+            # Clone the repo
+            print(f"Cloning to {self.o3de_source}...")
             subprocess.run([
                 'git', 'clone', 
                 'https://github.com/o3de/o3de.git',
                 str(self.o3de_source)
             ], check=True)
-            print("✓ Repository cloned successfully!")
+            
+            print("\n✓ Repository cloned successfully!")
+            
+            # Setup Git LFS
+            print("\nSetting up Git LFS...")
+            subprocess.run(['git', 'lfs', 'install'], 
+                         cwd=str(self.o3de_source), 
+                         check=True)
+            
+            # Pull LFS files
+            print("\nPulling Git LFS files (this will take a while)...")
+            subprocess.run(['git', 'lfs', 'pull'], 
+                         cwd=str(self.o3de_source), 
+                         check=True)
+            
+            print("\n✓ Git LFS files downloaded!")
             return True
+            
         except subprocess.CalledProcessError as e:
-            print(f"✗ Failed to clone repository: {e}")
+            print(f"\n✗ Failed to clone repository: {e}")
+            return False
+    
+    def verify_git_repo(self):
+        """Verify that O3DE is a proper Git repository"""
+        print("\n" + "=" * 60)
+        print("Verifying Git Repository...")
+        print("=" * 60)
+        
+        git_dir = self.o3de_source / ".git"
+        cmake_file = self.o3de_source / "CMakeLists.txt"
+        
+        if not git_dir.exists():
+            print(f"✗ {self.o3de_source} is not a Git repository!")
+            print("  Missing .git folder")
+            return False
+        
+        if not cmake_file.exists():
+            print(f"✗ {self.o3de_source} is missing CMakeLists.txt!")
+            print("  The repository may be incomplete")
+            return False
+        
+        # Check if it's actually an O3DE repo
+        try:
+            result = subprocess.run(['git', 'remote', 'get-url', 'origin'],
+                                  cwd=str(self.o3de_source),
+                                  capture_output=True,
+                                  text=True,
+                                  check=True)
+            
+            if 'o3de' in result.stdout.lower():
+                print(f"✓ Valid O3DE Git repository")
+                print(f"  Remote: {result.stdout.strip()}")
+                return True
+            else:
+                print(f"✗ This doesn't appear to be an O3DE repository")
+                print(f"  Remote: {result.stdout.strip()}")
+                return False
+                
+        except subprocess.CalledProcessError:
+            print("✗ Failed to verify Git remote")
             return False
     
     def create_packages_dir(self):
@@ -126,6 +228,7 @@ class O3DESetup:
             print(f"\nCreating packages directory: {self.packages_path}")
             self.packages_path.mkdir(parents=True, exist_ok=True)
         print(f"✓ Packages directory ready: {self.packages_path}")
+        return True
     
     def configure_engine(self):
         """Configure the engine with CMake"""
@@ -133,6 +236,7 @@ class O3DESetup:
         print("Configuring Engine with CMake...")
         print("=" * 60)
         print("This will download and configure third-party dependencies...")
+        print("This takes 10-15 minutes...\n")
         
         self.build_path.mkdir(parents=True, exist_ok=True)
         
@@ -144,7 +248,7 @@ class O3DESetup:
             f'-DLY_3RDPARTY_PATH={self.packages_path}'
         ]
         
-        print(f"\nRunning: {' '.join(cmake_cmd)}\n")
+        print(f"Running: {' '.join(cmake_cmd)}\n")
         
         try:
             subprocess.run(cmake_cmd, check=True)
@@ -152,6 +256,10 @@ class O3DESetup:
             return True
         except subprocess.CalledProcessError as e:
             print(f"\n✗ CMake configuration failed: {e}")
+            print("\nTroubleshooting tips:")
+            print("  - Make sure Visual Studio 2019 is installed")
+            print("  - Verify you have the 'Game Development with C++' workload")
+            print("  - Try running this script as Administrator")
             return False
     
     def register_engine(self):
@@ -223,7 +331,7 @@ class O3DESetup:
     def build_project(self):
         """Build the project"""
         print("\n" + "=" * 60)
-        print("Building Project (This will take a while)...")
+        print("Building Project (This will take a LONG while)...")
         print("=" * 60)
         
         project_build = self.project_path / "build" / "windows"
@@ -237,7 +345,7 @@ class O3DESetup:
         ]
         
         print(f"\nRunning: {' '.join(build_cmd)}\n")
-        print("Go grab a coffee, this will take 30+ minutes...\n")
+        print("⏰ Go grab lunch, this takes 30-60 minutes...\n")
         
         try:
             subprocess.run(build_cmd, check=True)
@@ -252,7 +360,7 @@ class O3DESetup:
         """Main execution flow"""
         print("\n")
         print("╔" + "═" * 58 + "╗")
-        print("║" + " " * 10 + "O3DE Setup Automation Script" + " " * 20 + "║")
+        print("║" + " " * 8 + "O3DE Clean Install Automation Script" + " " * 13 + "║")
         print("╚" + "═" * 58 + "╝")
         print()
         
@@ -266,9 +374,15 @@ class O3DESetup:
             print("\n✗ Setup cancelled by user.")
             return False
         
+        # Nuke existing installations
+        if not self.nuke_existing_installations():
+            print("\n✗ Failed to clean up existing installations.")
+            return False
+        
         # Execute setup steps
         steps = [
-            ("Clone Repository", self.clone_repo),
+            ("Clone Repository (Git + LFS)", self.clone_repo),
+            ("Verify Git Repository", self.verify_git_repo),
             ("Create Packages Directory", self.create_packages_dir),
             ("Configure Engine", self.configure_engine),
             ("Register Engine", self.register_engine),
@@ -276,25 +390,38 @@ class O3DESetup:
             ("Configure Project", self.configure_project),
         ]
         
-        for step_name, step_func in steps:
-            if not step_func():
+        for i, (step_name, step_func) in enumerate(steps, 1):
+            print(f"\n{'='*60}")
+            print(f"[Step {i}/{len(steps)}] {step_name}")
+            print(f"{'='*60}")
+            try:
+                if not step_func():
+                    print(f"\n✗✗✗ Setup failed at step: {step_name} ✗✗✗")
+                    print("Check the error messages above for details.")
+                    return False
+            except Exception as e:
                 print(f"\n✗✗✗ Setup failed at step: {step_name} ✗✗✗")
+                print(f"Error: {e}")
+                import traceback
+                traceback.print_exc()
                 return False
         
         # Ask about building
         print("\n" + "=" * 60)
-        build = input("Build the project now? (This takes 30+ minutes) (y/n): ").strip().lower()
+        build = input("Build the project now? (This takes 30-60 minutes) (y/n): ").strip().lower()
         if build == 'y':
             self.build_project()
         else:
-            print("\nSkipping build. You can build later with:")
+            print("\n⏭ Skipping build. You can build later with:")
             project_build = self.project_path / "build" / "windows"
-            print(f"cmake --build {project_build} --target {self.project_name}.GameLauncher Editor --config profile -- /m")
+            print(f"\ncmake --build {project_build} --target {self.project_name}.GameLauncher Editor --config profile -- /m\n")
         
         print("\n" + "╔" + "═" * 58 + "╗")
-        print("║" + " " * 15 + "Setup Complete!" + " " * 26 + "║")
+        print("║" + " " * 18 + "Setup Complete!" + " " * 23 + "║")
         print("╚" + "═" * 58 + "╝")
-        print(f"\nYour O3DE project is ready at: {self.project_path}")
+        print(f"\n✓ Your O3DE project is ready at: {self.project_path}")
+        print(f"✓ O3DE engine is at: {self.o3de_source}")
+        print("\nHappy game developing! 🎮\n")
         return True
 
 if __name__ == "__main__":
