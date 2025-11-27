@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kingdomino Scorecard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .scorecard {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 1.2em;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+        }
+
+        .territory-label {
+            font-weight: 600;
+            color: #333;
+            text-align: left;
+            font-size: 1.1em;
+        }
+
+        input[type="number"] {
+            width: 80px;
+            padding: 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            text-align: center;
+            transition: border-color 0.3s;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .bonus-row {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .total-row {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            font-weight: bold;
+            font-size: 1.3em;
+            color: white;
+        }
+
+        .total-row td {
+            border-bottom: none;
+            padding: 15px;
+        }
+
+        .reset-btn {
+            display: block;
+            width: 200px;
+            margin: 20px auto 0;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+
+        .reset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+
+        .reset-btn:active {
+            transform: translateY(0);
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.5em;
+            }
+            
+            th, td {
+                padding: 8px 4px;
+                font-size: 0.9em;
+            }
+
+            input[type="number"] {
+                width: 60px;
+                padding: 6px;
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏰 Kingdomino Scorecard 🏰</h1>
+        
+        <div class="scorecard">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Territory</th>
+                        <th>Player 1</th>
+                        <th>Player 2</th>
+                        <th>Player 3</th>
+                        <th>Player 4</th>
+                    </tr>
+                </thead>
+                <tbody id="scoreBody">
+                </tbody>
+            </table>
+        </div>
+        
+        <button class="reset-btn" onclick="resetAll()">Reset All Scores</button>
+    </div>
+
+    <script>
+        const territories = [
+            { name: 'Fields', emoji: '🌾' },
+            { name: 'Forest', emoji: '🌲' },
+            { name: 'Water', emoji: '💧' },
+            { name: 'Grassland', emoji: '🌱' },
+            { name: 'Swamp', emoji: '🌿' },
+            { name: 'Mine', emoji: '⛏️' }
+        ];
+
+        function initialize() {
+            const tbody = document.getElementById('scoreBody');
+            let html = '';
+            
+            // Territory rows
+            territories.forEach((t, i) => {
+                html += `
+                    <tr>
+                        <td class="territory-label">${t.emoji} ${t.name}</td>
+                        <td><input type="number" min="0" value="0" id="p1-t${i}" onchange="calculate()"></td>
+                        <td><input type="number" min="0" value="0" id="p2-t${i}" onchange="calculate()"></td>
+                        <td><input type="number" min="0" value="0" id="p3-t${i}" onchange="calculate()"></td>
+                        <td><input type="number" min="0" value="0" id="p4-t${i}" onchange="calculate()"></td>
+                    </tr>
+                `;
+            });
+            
+            // Bonus row
+            html += `
+                <tr class="bonus-row">
+                    <td class="territory-label">🏆 Bonus</td>
+                    <td><input type="number" min="0" value="0" id="p1-bonus" onchange="calculate()"></td>
+                    <td><input type="number" min="0" value="0" id="p2-bonus" onchange="calculate()"></td>
+                    <td><input type="number" min="0" value="0" id="p3-bonus" onchange="calculate()"></td>
+                    <td><input type="number" min="0" value="0" id="p4-bonus" onchange="calculate()"></td>
+                </tr>
+            `;
+            
+            // Total row
+            html += `
+                <tr class="total-row">
+                    <td>TOTAL</td>
+                    <td id="total-1">0</td>
+                    <td id="total-2">0</td>
+                    <td id="total-3">0</td>
+                    <td id="total-4">0</td>
+                </tr>
+            `;
+            
+            tbody.innerHTML = html;
+        }
+
+        function calculate() {
+            for (let p = 1; p <= 4; p++) {
+                let total = 0;
+                
+                territories.forEach((t, i) => {
+                    const points = parseInt(document.getElementById(`p${p}-t${i}`).value) || 0;
+                    total += points;
+                });
+                
+                const bonus = parseInt(document.getElementById(`p${p}-bonus`).value) || 0;
+                total += bonus;
+                
+                document.getElementById(`total-${p}`).textContent = total;
+            }
+        }
+
+        function resetAll() {
+            if (confirm('Reset all scores?')) {
+                document.querySelectorAll('input[type="number"]').forEach(input => {
+                    input.value = 0;
+                });
+                calculate();
+            }
+        }
+
+        initialize();
+    </script>
+</body>
+</html>
