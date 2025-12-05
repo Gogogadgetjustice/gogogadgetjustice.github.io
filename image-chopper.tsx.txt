@@ -1,0 +1,331 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { Plus, Minus, Download, MoveVertical, MoveHorizontal } from 'lucide-react';
+
+export default function ImageChopper() {
+  const [image, setImage] = useState(null);
+  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
+  const [horizontalLines, setHorizontalLines] = useState([]);
+  const [verticalLines, setVerticalLines] = useState([]);
+  const [selectedLine, setSelectedLine] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const canvasRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    drawCanvas();
+  }, [image, horizontalLines, verticalLines, selectedLine]);
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          setImage(img);
+          setImageDimensions({ width: img.width, height: img.height });
+          setHorizontalLines([]);
+          setVerticalLines([]);
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const drawCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas || !image) return;
+
+    const ctx = canvas.getContext('2d');
+    const maxWidth = Math.min(800, window.innerWidth - 40);
+    const maxHeight = 600;
+    let scale = Math.min(maxWidth / image.width, maxHeight / image.height, 1);
+    
+    const displayWidth = image.width * scale;
+    const displayHeight = image.height * scale;
+    
+    canvas.width = displayWidth;
+    canvas.height = displayHeight;
+
+    ctx.drawImage(image, 0, 0, displayWidth, displayHeight);
+
+    // Draw horizontal lines with handles
+    horizontalLines.forEach((y, index) => {
+      const displayY = y * scale;
+      const isSelected = selectedLine?.type === 'horizontal' && selectedLine?.index === index;
+      ctx.strokeStyle = isSelected ? '#ef4444' : '#3b82f6';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, displayY);
+      ctx.lineTo(displayWidth, displayY);
+      ctx.stroke();
+
+      // Draw handle circles on the line
+      ctx.fillStyle = isSelected ? '#ef4444' : '#3b82f6';
+      ctx.beginPath();
+      ctx.arc(displayWidth / 2, displayY, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    });
+
+    // Draw vertical lines with handles
+    verticalLines.forEach((x, index) => {
+      const displayX = x * scale;
+      const isSelected = selectedLine?.type === 'vertical' && selectedLine?.index === index;
+      ctx.strokeStyle = isSelected ? '#ef4444' : '#3b82f6';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(displayX, 0);
+      ctx.lineTo(displayX, displayHeight);
+      ctx.stroke();
+
+      // Draw handle circles on the line
+      ctx.fillStyle = isSelected ? '#ef4444' : '#3b82f6';
+      ctx.beginPath();
+      ctx.arc(displayX, displayHeight / 2, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    });
+  };
+
+  const addHorizontalLine = () => {
+    if (!image) return;
+    const newY = Math.floor(imageDimensions.height / 2);
+    setHorizontalLines([...horizontalLines, newY].sort((a, b) => a - b));
+  };
+
+  const addVerticalLine = () => {
+    if (!image) return;
+    const newX = Math.floor(imageDimensions.width / 2);
+    setVerticalLines([...verticalLines, newX].sort((a, b) => a - b));
+  };
+
+  const removeSelectedLine = () => {
+    if (!selectedLine) return;
+    
+    if (selectedLine.type === 'horizontal') {
+      setHorizontalLines(horizontalLines.filter((_, i) => i !== selectedLine.index));
+    } else {
+      setVerticalLines(verticalLines.filter((_, i) => i !== selectedLine.index));
+    }
+    setSelectedLine(null);
+  };
+
+  const getPointerPosition = (e) => {
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const scale = canvas.width / imageDimensions.width;
+    
+    let clientX, clientY;
+    if (e.touches) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    
+    const x = (clientX - rect.left) / scale;
+    const y = (clientY - rect.top) / scale;
+    return { x, y };
+  };
+
+  const handlePointerDown = (e) => {
+    if (!image) return;
+    e.preventDefault();
+    
+    const { x, y } = getPointerPosition(e);
+    const threshold = 15 / (canvasRef.current.width / imageDimensions.width);
+
+    // Check horizontal lines
+    for (let i = 0; i < horizontalLines.length; i++) {
+      if (Math.abs(y - horizontalLines[i]) < threshold) {
+        setSelectedLine({ type: 'horizontal', index: i });
+        setIsDragging(true);
+        return;
+      }
+    }
+
+    // Check vertical lines
+    for (let i = 0; i < verticalLines.length; i++) {
+      if (Math.abs(x - verticalLines[i]) < threshold) {
+        setSelectedLine({ type: 'vertical', index: i });
+        setIsDragging(true);
+        return;
+      }
+    }
+
+    setSelectedLine(null);
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDragging || !selectedLine || !image) return;
+    e.preventDefault();
+
+    const { x, y } = getPointerPosition(e);
+
+    if (selectedLine.type === 'horizontal') {
+      const newY = Math.max(0, Math.min(imageDimensions.height, y));
+      const newLines = [...horizontalLines];
+      newLines[selectedLine.index] = newY;
+      setHorizontalLines(newLines.sort((a, b) => a - b));
+    } else {
+      const newX = Math.max(0, Math.min(imageDimensions.width, x));
+      const newLines = [...verticalLines];
+      newLines[selectedLine.index] = newX;
+      setVerticalLines(newLines.sort((a, b) => a - b));
+    }
+  };
+
+  const handlePointerUp = () => {
+    setIsDragging(false);
+  };
+
+  const chopImage = () => {
+    if (!image) return;
+
+    const yPositions = [0, ...horizontalLines, imageDimensions.height];
+    const xPositions = [0, ...verticalLines, imageDimensions.width];
+
+    for (let row = 0; row < yPositions.length - 1; row++) {
+      for (let col = 0; col < xPositions.length - 1; col++) {
+        const x = xPositions[col];
+        const y = yPositions[row];
+        const width = xPositions[col + 1] - x;
+        const height = yPositions[row + 1] - y;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        
+        ctx.drawImage(image, x, y, width, height, 0, 0, width, height);
+        
+        canvas.toBlob((blob) => {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `piece_${row + 1}_${col + 1}.png`;
+          link.click();
+          URL.revokeObjectURL(url);
+        });
+      }
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-4 md:p-8">
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-3xl md:text-4xl font-bold text-white mb-6 md:mb-8 text-center">Image Chopper</h1>
+        
+        {!image ? (
+          <div className="bg-slate-800 rounded-lg p-8 md:p-12 text-center border-2 border-dashed border-slate-600">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg text-lg font-semibold transition"
+            >
+              Load Image
+            </button>
+            <p className="text-slate-400 mt-4">Select an image to get started</p>
+          </div>
+        ) : (
+          <div className="space-y-4 md:space-y-6">
+            <div className="bg-slate-800 rounded-lg p-4 md:p-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <button
+                  onClick={addHorizontalLine}
+                  className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-semibold transition text-sm md:text-base"
+                >
+                  <MoveHorizontal size={18} />
+                  <span className="hidden sm:inline">Horizontal</span>
+                  <Plus size={18} className="sm:hidden" />
+                </button>
+                <button
+                  onClick={addVerticalLine}
+                  className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-semibold transition text-sm md:text-base"
+                >
+                  <MoveVertical size={18} />
+                  <span className="hidden sm:inline">Vertical</span>
+                  <Plus size={18} className="sm:hidden" />
+                </button>
+                <button
+                  onClick={removeSelectedLine}
+                  disabled={!selectedLine}
+                  className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base"
+                >
+                  <Minus size={18} />
+                  Remove
+                </button>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-3 rounded-lg font-semibold transition text-sm md:text-base"
+                >
+                  New Image
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-slate-800 rounded-lg p-3 md:p-6">
+              <canvas
+                ref={canvasRef}
+                onMouseDown={handlePointerDown}
+                onMouseMove={handlePointerMove}
+                onMouseUp={handlePointerUp}
+                onMouseLeave={handlePointerUp}
+                onTouchStart={handlePointerDown}
+                onTouchMove={handlePointerMove}
+                onTouchEnd={handlePointerUp}
+                className="mx-auto border-2 border-slate-700 cursor-crosshair touch-none"
+                style={{ maxWidth: '100%', height: 'auto' }}
+              />
+              <p className="text-slate-400 text-center mt-3 md:mt-4 text-xs md:text-sm">
+                Tap/click a line to select (turns red), then drag the handle to move it
+              </p>
+            </div>
+
+            {selectedLine && (
+              <div className="bg-slate-700 rounded-lg p-4 text-center">
+                <p className="text-white font-semibold">
+                  Selected: {selectedLine.type === 'horizontal' ? 'Horizontal' : 'Vertical'} Line {selectedLine.index + 1}
+                </p>
+                <p className="text-slate-300 text-sm mt-1">
+                  Position: {selectedLine.type === 'horizontal' 
+                    ? Math.round(horizontalLines[selectedLine.index]) 
+                    : Math.round(verticalLines[selectedLine.index])}px
+                </p>
+              </div>
+            )}
+
+            <div className="text-center">
+              <button
+                onClick={chopImage}
+                disabled={horizontalLines.length === 0 && verticalLines.length === 0}
+                className="flex items-center gap-3 bg-green-600 hover:bg-green-700 text-white px-8 md:px-10 py-3 md:py-4 rounded-lg text-lg md:text-xl font-bold transition disabled:opacity-50 disabled:cursor-not-allowed mx-auto"
+              >
+                <Download size={24} />
+                CHOP IMAGE
+              </button>
+              <p className="text-slate-400 mt-3 md:mt-4 text-sm md:text-base">
+                {horizontalLines.length === 0 && verticalLines.length === 0
+                  ? 'Add some lines to start chopping!'
+                  : `Will create ${(horizontalLines.length + 1) * (verticalLines.length + 1)} pieces`}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
