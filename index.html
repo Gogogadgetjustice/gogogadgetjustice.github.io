@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title> Gogogadgetjustice LOcal TOols</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa6b2;--accent:#7bd389}
+    html,body{height:100%}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;background:linear-gradient(180deg,#071024 0%, #081426 60%);color:#e6eef6;display:flex;align-items:center;justify-content:center;padding:28px}
+    .wrap{max-width:980px;width:100%}
+    header{display:flex;align-items:center;gap:18px;margin-bottom:20px}
+    header h1{margin:0;font-size:1.6rem}
+    header p{margin:0;color:var(--muted);font-size:0.95rem}
+    .controls{display:flex;gap:12px;align-items:center;margin-bottom:18px}
+    input[type="search"]{flex:1;padding:10px 12px;border-radius:10px;border:1px solid #122033;background:#08141d;color:inherit}
+    .list{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);box-shadow:0 6px 20px rgba(2,6,23,0.6)}
+    .card h3{margin:0 0 6px 0;font-size:1rem}
+    .card p{margin:0;color:var(--muted);font-size:0.88rem}
+    .meta{display:flex;gap:8px;align-items:center;margin-top:10px}
+    .meta a{color:var(--accent);text-decoration:none;font-weight:600}
+    footer{margin-top:20px;color:var(--muted);font-size:0.85rem}
+    .small{font-size:0.85rem;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <main class="wrap" id="app">
+    <header>
+      <div>
+        <h1>Small tools — no accounts, no tracking</h1>
+        <p>A friendly landing page listing some tools I made for fish, Fish, click any tile to open a tool in a new tab.</p>
+         <p>Fish don't gots no good music to listen to. Fish don't gots no good web tools eithers. </p>
+      </div>
+    </header>
+
+    <div class="controls">
+      <input id="search" type="search" placeholder="Search tools (name or title) — automatically updates when files are added" />
+      <button id="refresh">Refresh</button>
+    </div>
+
+    <section id="status" class="small">Loading tool list…</section>
+
+    <section id="list" class="list" aria-live="polite"></section>
+
+    <footer>
+      <div class="small">This index is generated client-side from the repository contents using the GitHub API. If you add new .html files to the repo they will appear here automatically.</div>
+    </footer>
+  </main>
+
+  <script>
+    (function(){
+      const owner = "Gogogadgetjustice";
+      const repo = "gogogadgetjustice.github.io";
+      const branch = "main";
+      const apiBase = `https://api.github.com/repos/${owner}/${repo}/contents`;
+      const searchInput = document.getElementById('search');
+      const listEl = document.getElementById('list');
+      const statusEl = document.getElementById('status');
+      const refreshBtn = document.getElementById('refresh');
+
+      async function humanize(name){
+        // remove extension, replace -/_ with spaces, decodeURI, Title Case
+        try {
+          name = decodeURIComponent(name);
+        } catch(e){}
+        const noext = name.replace(/\.html$/i, '');
+        const cleaned = noext.replace(/[_\-]+/g, ' ').replace(/\s+/g,' ').trim();
+        return cleaned.split(' ').map(w => w ? (w[0].toUpperCase() + w.slice(1)) : '').join(' ');
+      }
+
+      function escapeHtml(s){ return (s+'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]); }
+
+      async function fetchContents(){
+        statusEl.textContent = 'Fetching repository file list…';
+        listEl.innerHTML = '';
+        try {
+          const resp = await fetch(`${apiBase}?ref=${branch}`);
+          if(!resp.ok) throw new Error(`GitHub API error: ${resp.status}`);
+          const all = await resp.json();
+          // Filter to HTML files
+          let htmlFiles = all.filter(item => item.type === 'file' && /\.html$/i.test(item.name));
+          // Remove this index from the list (we're the index page)
+          htmlFiles = htmlFiles.filter(f => !/^index\.html$/i.test(f.name));
+          if(htmlFiles.length === 0){
+            statusEl.textContent = 'No HTML tools found in the repository.';
+            return;
+          }
+          statusEl.textContent = `Found ${htmlFiles.length} HTML file(s). Loading titles…`;
+
+          // For each file, try to get a title from the file contents via GitHub API content (base64)
+          const items = await Promise.all(htmlFiles.map(async file => {
+            // If content is already in the object (rare), use it; otherwise request the file content endpoint (same item.url)
+            let title = null, excerpt = null;
+            try {
+              const r = await fetch(file.url + `?ref=${branch}`);
+              if(r.ok){
+                const json = await r.json();
+                if(json.content){
+                  const decoded = atob(json.content.replace(/\n/g,''));
+                  // try to extract <title>
+                  const tMatch = decoded.match(/<title[^>]*>([^<]+)<\/title>/i);
+                  if(tMatch) title = tMatch[1].trim();
+                  // try to extract first <h1>
+                  if(!title){
+                    const h1 = decoded.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+                    if(h1) title = h1[1].trim();
+                  }
+                  // small excerpt from first paragraph
+                  const p = decoded.match(/<p[^>]*>([^<]{20,200}?)<\/p>/i);
+                  if(p) excerpt = p[1].trim();
+                }
+              }
+            } catch(e){
+              // ignore individual fetch errors
+            }
+            if(!title) title = await humanize(file.name);
+            const url = new URL(file.path, location.origin + '/').href; // links to site root /filename
+            return { name: file.name, title, excerpt, url, size: file.size };
+          }));
+
+          // Save items globally and render
+          window.__toolItems = items.sort((a,b)=>a.title.localeCompare(b.title));
+          renderList(window.__toolItems);
+          statusEl.textContent = `Showing ${window.__toolItems.length} tools. Use the search box to filter.`;
+        } catch (err){
+          statusEl.textContent = 'Could not load repository contents: ' + err.message + ' — falling back to static links (if any).';
+          // As fallback show a small manual list (you can keep a few known links here)
+          const fallback = [
+            'kingdomino-scorecard.html',
+            'layout-collage-v3.html',
+            'optimized_palette_swappe maybe.html',
+            'unity-color-picker.html',
+            'midi.html'
+          ];
+          window.__toolItems = fallback.map(fn => ({ name: fn, title: fn.replace(/\.html$/,''), url: fn }));
+          renderList(window.__toolItems);
+        }
+      }
+
+      function renderList(items){
+        const q = (searchInput.value || '').toLowerCase().trim();
+        const filtered = items.filter(it => {
+          return it.title.toLowerCase().includes(q) || it.name.toLowerCase().includes(q);
+        });
+        if(filtered.length === 0){
+          listEl.innerHTML = '<div class="small" style="grid-column:1/-1">No tools match that search.</div>';
+          return;
+        }
+        listEl.innerHTML = filtered.map(it => {
+          const t = escapeHtml(it.title || it.name);
+          const n = escapeHtml(it.name);
+          const excerpt = it.excerpt ? `<p>${escapeHtml(it.excerpt)}</p>` : '';
+          // make a user-visible friendly path (encode spaces)
+          const href = encodeURI(it.url);
+          return `<article class="card" title="${n}">
+            <h3><a href="${href}" target="_blank" rel="noopener noreferrer">${t}</a></h3>
+            ${excerpt}
+            <div class="meta"><a href="${href}" target="_blank" rel="noopener noreferrer">Open</a><div style="flex:1"></div><div class="small">${n}</div></div>
+          </article>`;
+        }).join('');
+      }
+
+      searchInput.addEventListener('input', ()=>{ renderList(window.__toolItems || []); });
+      refreshBtn.addEventListener('click', ()=>fetchContents());
+
+      // initial load
+      fetchContents();
+    })();
+  </script>
+</body>
+</html>
