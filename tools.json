@@ -1,0 +1,27 @@
+{
+  "kingdomino-scorecard.html": {
+    "title": "Kingdomino Scorecard",
+    "description": "A quick scoring sheet for Kingdomino games.",
+    "image": ""
+  },
+  "layout-collage-v3.html": {
+    "title": "Layout Collage",
+    "description": "Create image collages from local images.",
+    "image": ""
+  },
+  "optimized_palette_swappe maybe.html": {
+    "title": "Palette Swapper",
+    "description": "Swap and optimize color palettes for images.",
+    "image": ""
+  },
+  "unity-color-picker.html": {
+    "title": "Unity Color Picker",
+    "description": "A small color picker useful for Unity development.",
+    "image": ""
+  },
+  "midi.html": {
+    "title": "MIDI Tools",
+    "description": "Adjust volume and basic operations on MIDI files.",
+    "image": ""
+  }
+}
