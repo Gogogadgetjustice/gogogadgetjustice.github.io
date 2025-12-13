@@ -1,0 +1,411 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simple Layout-Style Collage (v3: Custom Grid, Remove, Filter Target, Shortcuts)</title>
+  <style>
+    :root{
+      --bg:#0f172a; --panel:#111827; --accent:#22c55e; --text:#e5e7eb; --muted:#9ca3af; --danger:#ef4444; --amber:#f59e0b;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{ margin:0; background:linear-gradient(120deg,#0b1023,#121a33); color:var(--text);
+          font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif; }
+    header{ display:flex; align-items:center; gap:.75rem; padding:.75rem 1rem; position:sticky; top:0; z-index:10;
+            background:rgba(17,24,39,.85); backdrop-filter:saturate(1.2) blur(6px); border-bottom:1px solid #1f2937; }
+    header h1{font-size:1.1rem; margin:0; letter-spacing:.3px}
+    .container{display:grid; grid-template-columns: 360px 1fr; gap: 1rem; padding: 1rem; max-width: 1440px; margin: 0 auto;}
+    .panel{ background:var(--panel); border:1px solid #1f2937; border-radius:12px; padding:.75rem; overflow:auto; max-height:calc(100vh - 7rem); }
+    .panel h2{font-size:.95rem; margin:.5rem 0 .5rem; color:#cbd5e1}
+    .row{display:flex; flex-wrap:wrap; gap:.5rem; align-items:center}
+    label{font-size:.8rem; color:var(--muted)}
+    select,input[type=color],input[type=range],input[type=number],button{ appearance:none; background:#0b1222; color:#e5e7eb; border:1px solid #1f2937; border-radius:8px; padding:.5rem .6rem; font-size:.85rem; }
+    select,input[type=color]{height:2.2rem}
+    input[type=range]{width: 160px;}
+    input[type=number]{width: 80px;}
+    button{cursor:pointer}
+    button.primary{background:linear-gradient(180deg,#22c55e,#16a34a); border:0; color:#04130a}
+    button.secondary{background:#0b1222}
+    button.danger{background:linear-gradient(180deg,#ef4444,#dc2626); border:0; color:#1a0d0d}
+    .hint{font-size:.78rem; color:#a3a3a3; padding:.25rem .5rem}
+
+    .workspace{ background:#0a0f1f; border:1px solid #1f2937; border-radius:12px; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+    .workspace-toolbar{display:flex; justify-content:space-between; align-items:center; padding:.5rem; border-bottom:1px solid #1f2937; background:#0c1324;}
+    .canvas-wrap{position:relative; width:100%; height:calc(100% - 3rem)}
+    canvas{display:block; width:100%; height:100%; background:#111827}
+    .badge{padding:.15rem .4rem; border:1px solid #334155; border-radius:999px; font-size:.72rem; color:#cbd5e1}
+    .small{font-size:.78rem}
+    .spacer{flex:1}
+    .mode-on{ outline: 2px solid var(--accent); }
+    .kbd{background:#0b1222; border:1px solid #334155; border-radius:6px; padding:.1rem .25rem; font-size:.75rem;}
+  </style>
+</head>
+<body>
+  <header>
+    <span class="badge">Collage</span>
+    <h1>Simple Layout‑style Photo Collage</h1>
+    <div class="spacer"></div>
+    <button id="exportPng" class="primary">Export PNG</button>
+    <button id="exportJpg" class="secondary">Export JPG</button>
+  </header>
+
+  <div class="container">
+    <!-- Controls Panel -->
+    <aside class="panel" id="controls">
+      <h2>Photos</h2>
+      <div class="row">
+        <input id="fileInput" type="file" accept="image/*" multiple />
+        <button id="addSample" class="secondary">Add Sample</button>
+        <button id="clearPhotos" class="danger">Clear</button>
+      </div>
+      <div class="row">
+        <button id="removeSelected" class="danger">Remove selected</button>
+      </div>
+
+      <h2>Canvas</h2>
+      <div class="row">
+        <label for="aspect">Aspect</label>
+        <select id="aspect">
+          <option value="1">Square 1:1</option>
+          <option value="0.75">Portrait 4:3</option>
+          <option value="1.33">Landscape 4:3</option>
+          <option value="1.78">Widescreen 16:9</option>
+        </select>
+        <label for="size">Size</label>
+        <select id="size">
+          <option value="800">800 px</option>
+          <option value="1200" selected>1200 px</option>
+          <option value="1600">1600 px</option>
+        </select>
+      </div>
+      <div class="row">
+        <label for="bgColor">Background</label>
+        <input id="bgColor" type="color" value="#111827" />
+        <label for="bgImage">Image</label>
+        <input id="bgImage" type="file" accept="image/*" />
+        <button id="clearBgImg" class="secondary">Clear</button>
+      </div>
+
+      <h2>Layouts</h2>
+      <div class="row">
+        <select id="layoutPreset"></select>
+      </div>
+      <div class="row">
+        <span class="small">Custom grid:</span>
+        <label>Rows</label><input id="cgRows" type="number" min="1" max="10" value="1" />
+        <label>Cols</label><input id="cgCols" type="number" min="1" max="10" value="3" />
+        <button id="buildGrid" class="secondary">Build</button>
+      </div>
+      <div class="hint">Drag inside a cell to reposition. Use <span class="kbd">M</span> for Move mode to change cells or swap.</div>
+
+      <h2>Border</h2>
+      <div class="row">
+        <label class="small"><input type="checkbox" id="showBorder" checked /> Show white border</label>
+        <label>Thickness</label>
+        <input type="range" id="borderPx" min="0" max="40" value="10" />
+      </div>
+
+      <h2>Selected Photo</h2>
+      <div class="row">
+        <button id="moveMode" class="secondary">Move mode: OFF</button>
+        <label for="moveToCell">Move to cell</label>
+        <select id="moveToCell"></select>
+      </div>
+      <div class="row">
+        <label>Zoom</label>
+        <input type="range" id="zoom" min="0.2" max="5" value="1" step="0.01" />
+        <label>Rotate</label>
+        <input type="range" id="rotate" min="-180" max="180" value="0" step="1" />
+      </div>
+      <div class="row">
+        <button id="flipH" class="secondary">Flip H</button>
+        <button id="flipV" class="secondary">Flip V</button>
+        <button id="fitCell" class="secondary">Fit to cell</button>
+        <button id="centerImg" class="secondary">Center</button>
+      </div>
+
+      <h2>Filters</h2>
+      <div class="row">
+        <label>Apply to:</label>
+        <label class="small"><input type="radio" name="filterTarget" value="selected" checked /> Selected</label>
+        <label class="small"><input type="radio" name="filterTarget" value="collage" /> Collage</label>
+      </div>
+      <div class="row">
+        <label>Preset</label>
+        <select id="filterPreset">
+          <option value="none">None</option>
+          <option value="bw">Black & White</option>
+          <option value="vivid">Vivid</option>
+          <option value="warm">Warm</option>
+          <option value="cool">Cool</option>
+          <option value="retro">Retro</option>
+          <option value="blur">Soft Blur</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>Brightness</label><input type="range" id="fBrightness" min="0" max="2" step="0.01" value="1" />
+        <label>Contrast</label><input type="range" id="fContrast" min="0" max="2" step="0.01" value="1" />
+      </div>
+      <div class="row">
+        <label>Saturation</label><input type="range" id="fSaturate" min="0" max="2" step="0.01" value="1" />
+        <label>Sepia</label><input type="range" id="fSepia" min="0" max="1" step="0.01" value="0" />
+      </div>
+      <div class="row">
+        <label>Hue</label><input type="range" id="fHueRotate" min="-180" max="180" step="1" value="0" />
+        <label>Blur</label><input type="range" id="fBlur" min="0" max="8" step="0.1" value="0" />
+      </div>
+      <div class="row">
+        <button id="applyToSelected" class="secondary">Apply to selected</button>
+        <button id="applyToAll" class="secondary">Apply to collage</button>
+        <button id="clearFilters" class="secondary">Clear filters</button>
+      </div>
+
+      <h2>Session</h2>
+      <div class="row">
+        <button id="saveJson" class="secondary">Save .json</button>
+        <input id="loadJson" type="file" accept="application/json" />
+      </div>
+
+      <div class="hint small">Shortcuts: <span class="kbd">M</span> Move • <span class="kbd">G</span> Grid • <span class="kbd">S</span> Snap • <span class="kbd">B</span> Border • <span class="kbd">Del</span> Remove • <span class="kbd">Arrows</span> Nudge • <span class="kbd">Shift+Arrows</span> Big Nudge • <span class="kbd">[ / ]</span> Zoom • <span class="kbd">R</span> Reset rotate • <span class="kbd">Shift+R</span> 90° • <span class="kbd">Ctrl+Z</span> Undo • <span class="kbd">Ctrl+Y</span> Redo</div>
+    </aside>
+
+    <!-- Workspace -->
+    <section class="workspace" id="workspace">
+      <div class="workspace-toolbar">
+        <div class="row">
+          <span class="hint">Tip: Click an image to select. Drag to reposition. Pinch to zoom. Toggle <strong>Move mode</strong> to move/swap cells. Build custom grids in <strong>Layouts</strong>.</span>
+        </div>
+        <div class="spacer"></div>
+        <div class="row">
+          <button id="toggleSnap" class="secondary">Snap to cells: ON</button>
+          <button id="toggleOverlay" class="secondary">Show grid overlay</button>
+        </div>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="collage"></canvas>
+      </div>
+    </section>
+  </div>
+
+  <footer class="footer">All processing happens locally in your browser. No uploads are made.</footer>
+
+<script>
+(function(){
+  const canvas = document.getElementById('collage');
+  const ctx = canvas.getContext('2d');
+
+  let CANVAS_BASE_SIZE = 1200; let aspect = 1; let canvasWidth = CANVAS_BASE_SIZE; let canvasHeight = CANVAS_BASE_SIZE;
+  let background = { color: '#111827', image: null };
+  let showBorder = true; let borderPx = 10; let showOverlay = false; let snapToCells = true;
+  let layout = { name:'1x1', cells:[{x:0,y:0,w:1,h:1}] };
+  let photos = []; let selectedId = null; let collageFilter = applyPreset('none');
+  let moveMode = false; let filterTarget = 'selected';
+
+  // History (undo/redo)
+  const history = []; let historyIndex = -1; const MAX_HISTORY = 50;
+  function pushHistory(){
+    const state = JSON.stringify({ CANVAS_BASE_SIZE, aspect, backgroundColor:background.color, showBorder, borderPx, showOverlay, snapToCells, layoutIndex: PRESETS.indexOf(layout), collageFilter, photos: photos.map(p=>({id:p.id,cellIndex:p.cellIndex,x:p.x,y:p.y,scale:p.scale,rot:p.rot,flipX:p.flipX,flipY:p.flipY,filters:p.filters,src:p.img.src})) });
+    // truncate forward
+    history.splice(historyIndex+1); history.push(state); if(history.length>MAX_HISTORY) history.shift(); historyIndex = history.length-1;
+  }
+  function restoreHistory(dir){ // dir -1 undo, +1 redo
+    const idx = historyIndex + dir; if(idx<0 || idx>=history.length) return; historyIndex = idx;
+    const data = JSON.parse(history[idx]);
+    CANVAS_BASE_SIZE = data.CANVAS_BASE_SIZE; aspect = data.aspect; updateCanvasSize();
+    background.color = data.backgroundColor; showBorder = data.showBorder; borderPx = data.borderPx; showOverlay = data.showOverlay; snapToCells = data.snapToCells;
+    layout = PRESETS[data.layoutIndex||0];
+    collageFilter = data.collageFilter || applyPreset('none');
+    photos = []; selectedId = null; nextId = 1;
+    const loadImg = (src)=> new Promise(resolve=>{ const img=new Image(); img.onload=()=>resolve(img); img.src=src; });
+    (async()=>{
+      for(const p of (data.photos||[])){
+        const img = await loadImg(p.src);
+        const np = { id: nextId++, img, cellIndex:p.cellIndex, x:p.x, y:p.y, scale:p.scale, rot:p.rot, flipX:p.flipX, flipY:p.flipY, filters:p.filters };
+        photos.push(np);
+      }
+      selectedId = photos.length?photos[0].id:null; draw();
+    })();
+  }
+
+  // Presets
+  const PRESETS = [
+    { name:'Classic • 1x1', cells:[{x:0,y:0,w:1,h:1}] },
+    { name:'Grid • 2x1', cells:[{x:0,y:0,w:.5,h:1},{x:.5,y:0,w:.5,h:1}] },
+    { name:'Grid • 2x2', cells:[{x:0,y:0,w:.5,h:.5},{x:.5,y:0,w:.5,h:.5},{x:0,y:.5,w:.5,h:.5},{x:.5,y:.5,w:.5,h:.5}] },
+    { name:'Grid • 3x3', cells:(()=>{let c=[];for(let r=0;r<3;r++)for(let k=0;k<3;k++)c.push({x:k/3,y:r/3,w:1/3,h:1/3});return c;})()},
+    { name:'Stripe • 3 Vertical', cells:[{x:0,y:0,w:1/3,h:1},{x:1/3,y:0,w:1/3,h:1},{x:2/3,y:0,w:1/3,h:1}] },
+    { name:'Stripe • 3 Horizontal', cells:[{x:0,y:0,w:1,h:1/3},{x:0,y:1/3,w:1,h:1/3},{x:0,y:2/3,w:1,h:1/3}] },
+    { name:'Feature • Big Left', cells:[{x:0,y:0,w:.6,h:1},{x:.6,y:0,w:.4,h:.5},{x:.6,y:.5,w:.4,h:.5}] },
+    { name:'Feature • Big Top', cells:[{x:0,y:0,w:1,h:.6},{x:0,y:.6,w:.5,h:.4},{x:.5,y:.6,w:.5,h:.4}] },
+    { name:'Mosaic • 5 cells', cells:[{x:0,y:0,w:.5,h:.5},{x:.5,y:0,w:.5,h:.5},{x:0,y:.5,w:.33,h:.5},{x:.33,y:.5,w:.34,h:.5},{x:.67,y:.5,w:.33,h:.5}] },
+    { name:'Freeform • No cells', cells:[{x:0,y:0,w:1,h:1}] },
+  ];
+
+  const layoutSel = document.getElementById('layoutPreset');
+  PRESETS.forEach((p,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=p.name; layoutSel.appendChild(o); });
+  layoutSel.value = 0; layout = PRESETS[0];
+
+  const moveBtn = document.getElementById('moveMode');
+  const moveToCellSel = document.getElementById('moveToCell');
+  const filterPresetSel = document.getElementById('filterPreset');
+  const filterTargetRadios = Array.from(document.querySelectorAll('input[name="filterTarget"]'));
+
+  function refreshMoveToCellOptions(){
+    moveToCellSel.innerHTML = '';
+    layout.cells.forEach((c,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent='Cell '+(i+1); moveToCellSel.appendChild(o); });
+  }
+  refreshMoveToCellOptions();
+
+  layoutSel.addEventListener('change', ()=>{ layout = PRESETS[parseInt(layoutSel.value)]; assignPhotosToCells(); refreshMoveToCellOptions(); pushHistory(); draw(); });
+
+  // Custom Grid
+  const cgRows = document.getElementById('cgRows');
+  const cgCols = document.getElementById('cgCols');
+  document.getElementById('buildGrid').addEventListener('click', ()=>{
+    const r = Math.max(1, Math.min(10, parseInt(cgRows.value)||1));
+    const c = Math.max(1, Math.min(10, parseInt(cgCols.value)||1));
+    const cells=[]; for(let y=0;y<r;y++){ for(let x=0;x<c;x++){ cells.push({x:x/c, y:y/r, w:1/c, h:1/r}); } }
+    layout = { name:`Custom • ${r}x${c}`, cells };
+    refreshMoveToCellOptions(); assignPhotosToCells(); pushHistory(); draw();
+  });
+
+  // Canvas sizing
+  function updateCanvasSize(){ canvasWidth = CANVAS_BASE_SIZE; canvasHeight = Math.round(CANVAS_BASE_SIZE/aspect); canvas.width = canvasWidth; canvas.height = canvasHeight; }
+  updateCanvasSize();
+
+  function cellRectPx(cell){ return { x:Math.round(cell.x*canvasWidth), y:Math.round(cell.y*canvasHeight), w:Math.round(cell.w*canvasWidth), h:Math.round(cell.h*canvasHeight) }; }
+  function cellIndexAtPoint(x,y){ for(let i=0;i<layout.cells.length;i++){ const r=cellRectPx(layout.cells[i]); if(x>=r.x && x<=r.x+r.w && y>=r.y && y<=r.y+r.h){ return i; } } return null; }
+  function photoById(id){ return photos.find(p=>p.id===id); }
+  function selected(){ return photoById(selectedId); }
+
+  // Filters
+  function filtersFromSliders(){ return { brightness:parseFloat(document.getElementById('fBrightness').value), contrast:parseFloat(document.getElementById('fContrast').value), saturate:parseFloat(document.getElementById('fSaturate').value), sepia:parseFloat(document.getElementById('fSepia').value), hueRotate:parseFloat(document.getElementById('fHueRotate').value), blur:parseFloat(document.getElementById('fBlur').value) }; }
+  function cssFilterString(f){ return `brightness(${f.brightness}) contrast(${f.contrast}) saturate(${f.saturate}) sepia(${f.sepia}) hue-rotate(${f.hueRotate}deg) blur(${f.blur}px)`; }
+  function ctxFilterString(f){ return cssFilterString(f); }
+  function applyPreset(name){ const map={ none:{brightness:1,contrast:1,saturate:1,sepia:0,hueRotate:0,blur:0}, bw:{brightness:1,contrast:1.15,saturate:0,sepia:0,hueRotate:0,blur:0}, vivid:{brightness:1.05,contrast:1.1,saturate:1.35,sepia:0,hueRotate:0,blur:0}, warm:{brightness:1.02,contrast:1.05,saturate:1.2,sepia:.15,hueRotate:-8,blur:0}, cool:{brightness:1.02,contrast:1.05,saturate:1.1,sepia:.05,hueRotate:12,blur:0}, retro:{brightness:1,contrast:1.05,saturate:.85,sepia:.25,hueRotate:-12,blur:0}, blur:{brightness:1,contrast:1,saturate:1,sepia:0,hueRotate:0,blur:2} }; const f=map[name]||map.none; setFilterSliders(f); return f; }
+  function setFilterSliders(f){ document.getElementById('fBrightness').value=f.brightness; document.getElementById('fContrast').value=f.contrast; document.getElementById('fSaturate').value=f.saturate; document.getElementById('fSepia').value=f.sepia; document.getElementById('fHueRotate').value=f.hueRotate; document.getElementById('fBlur').value=f.blur; }
+
+  // Drawing
+  function draw(){
+    ctx.save(); ctx.clearRect(0,0,canvasWidth,canvasHeight);
+    ctx.fillStyle = background.color || '#111827'; ctx.fillRect(0,0,canvasWidth,canvasHeight);
+    if(background.image){ const img=background.image; const scale=Math.max(canvasWidth/img.naturalWidth, canvasHeight/img.naturalHeight); const w=img.naturalWidth*scale, h=img.naturalHeight*scale; const x=(canvasWidth-w)/2, y=(canvasHeight-h)/2; ctx.drawImage(img,x,y,w,h); }
+
+    if(showBorder && borderPx>0 && layout.cells.length>1){ ctx.fillStyle='#ffffff'; layout.cells.forEach(c=>{ const r=cellRectPx(c); ctx.fillRect(r.x-Math.floor(borderPx/2), r.y-Math.floor(borderPx/2), r.w+borderPx, r.h+borderPx); }); ctx.save(); ctx.globalCompositeOperation='destination-out'; layout.cells.forEach(c=>{ const r=cellRectPx(c); ctx.fillRect(r.x,r.y,r.w,r.h); }); ctx.restore(); layout.cells.forEach(c=>{ const r=cellRectPx(c); ctx.fillStyle=background.color||'#111827'; ctx.fillRect(r.x,r.y,r.w,r.h); if(background.image){ const img=background.image; const scale=Math.max(canvasWidth/img.naturalWidth, canvasHeight/img.naturalHeight); const w=img.naturalWidth*scale, h=img.naturalHeight*scale; const x=(canvasWidth-w)/2, y=(canvasHeight-h)/2; ctx.drawImage(img,x,y,w,h);} }); }
+
+    ctx.save(); ctx.filter = ctxFilterString(collageFilter);
+    layout.cells.forEach((cell,ci)=>{
+      const r = cellRectPx(cell); ctx.save(); ctx.beginPath(); ctx.rect(r.x,r.y,r.w,r.h); ctx.clip();
+      photos.filter(p=>p.cellIndex===ci).forEach(p=>{ const cx=r.x+r.w/2; const cy=r.y+r.h/2; ctx.save(); ctx.filter = ctxFilterString(collageFilter)+' '+ctxFilterString(p.filters||applyPreset('none')); ctx.translate(cx+p.x, cy+p.y); const sx=p.flipX?-1:1, sy=p.flipY?-1:1; ctx.scale(sx*p.scale, sy*p.scale); ctx.rotate(p.rot*Math.PI/180); const iw=p.img.naturalWidth, ih=p.img.naturalHeight; ctx.drawImage(p.img,-iw/2,-ih/2); ctx.restore(); });
+      ctx.restore();
+      if(showOverlay){ ctx.save(); ctx.strokeStyle='rgba(255,255,255,.25)'; ctx.lineWidth=1; ctx.strokeRect(r.x+.5,r.y+.5,r.w-1,r.h-1); ctx.restore(); }
+    });
+    ctx.restore();
+
+    if(selectedId!==null){ const p=selected(); if(p){ const r=cellRectPx(layout.cells[p.cellIndex]); const cx=r.x+r.w/2+p.x; const cy=r.y+r.h/2+p.y; const iw=p.img.naturalWidth*p.scale; const ih=p.img.naturalHeight*p.scale; ctx.save(); ctx.translate(cx,cy); ctx.rotate(p.rot*Math.PI/180); ctx.scale(p.flipX?-1:1, p.flipY?-1:1); ctx.strokeStyle = moveMode ? '#f59e0b' : '#22c55e'; ctx.lineWidth=2; ctx.strokeRect(-iw/2,-ih/2,iw,ih); ctx.restore(); }}
+  }
+
+  // Interaction
+  let pointerDown=false; let lastPt=null; let pinchDist=null; let activePointerIds=new Set();
+  function canvasPointFromEvent(e){ const rect=canvas.getBoundingClientRect(); const x=(e.clientX-rect.left)*(canvas.width/rect.width); const y=(e.clientY-rect.top)*(canvas.height/rect.height); return {x,y}; }
+  function hitTestPhoto(x,y){ for(let i=photos.length-1;i>=0;i--){ const p=photos[i]; const r=cellRectPx(layout.cells[p.cellIndex]); const localX=x-(r.x+r.w/2)-p.x; const localY=y-(r.y+r.h/2)-p.y; const rot=-p.rot*Math.PI/180; const sx=(p.flipX?-1:1)/p.scale; const sy=(p.flipY?-1:1)/p.scale; const xr=(localX*Math.cos(rot)-localY*Math.sin(rot))*sx; const yr=(localX*Math.sin(rot)+localY*Math.cos(rot))*sy; const iw=p.img.naturalWidth, ih=p.img.naturalHeight; if(xr>=-iw/2 && xr<=iw/2 && yr>=-ih/2 && yr<=ih/2){ return p.id; } } return null; }
+  canvas.addEventListener('pointerdown',(e)=>{ canvas.setPointerCapture(e.pointerId); activePointerIds.add(e.pointerId); pointerDown=true; lastPt=canvasPointFromEvent(e); const hitId=hitTestPhoto(lastPt.x,lastPt.y); if(hitId!==null){ selectedId=hitId; } draw(); });
+  canvas.addEventListener('pointermove',(e)=>{ if(!pointerDown) return; const pt=canvasPointFromEvent(e); const p=selected(); if(!p) return;
+    if(moveMode){ /* no reposition */ }
+    else {
+      if(activePointerIds.size>=2){ if(pinchDist===null){ pinchDist={x:pt.x,y:pt.y}; } const dx=pt.x-pinchDist.x; const dy=pt.y-pinchDist.y; const delta=Math.sqrt(dx*dx+dy*dy); const sign=((dx+dy)>=0)?1:-1; p.scale=Math.max(.2,Math.min(5,p.scale+sign*delta/600)); pinchDist={x:pt.x,y:pt.y}; }
+      else { const dx=pt.x-lastPt.x; const dy=pt.y-lastPt.y; p.x+=dx; p.y+=dy; if(snapToCells){ const r=cellRectPx(layout.cells[p.cellIndex]); const iw=p.img.naturalWidth*p.scale; const ih=p.img.naturalHeight*p.scale; p.x=Math.max(-r.w/2+iw/2, Math.min(r.w/2-iw/2, p.x)); p.y=Math.max(-r.h/2+ih/2, Math.min(r.h/2-ih/2, p.y)); } lastPt=pt; }
+    }
+    draw();
+  });
+  canvas.addEventListener('pointerup',(e)=>{ activePointerIds.delete(e.pointerId); if(moveMode && selectedId!==null){ const pt=canvasPointFromEvent(e); const targetCi=cellIndexAtPoint(pt.x,pt.y); const p=selected(); if(p && targetCi!==null && targetCi!==p.cellIndex){ const hitId=hitTestPhoto(pt.x,pt.y); if(hitId!==null && hitId!==p.id){ const other=photoById(hitId); const tmp=other.cellIndex; other.cellIndex=p.cellIndex; p.cellIndex=tmp; fitToCell(other); fitToCell(p); } else { p.cellIndex=targetCi; fitToCell(p); } pushHistory(); draw(); } } pointerDown=false; lastPt=null; pinchDist=null; });
+  canvas.addEventListener('wheel',(e)=>{ const p=selected(); if(!p || moveMode) return; e.preventDefault(); const delta=Math.sign(e.deltaY)*-0.08; p.scale=Math.max(.2,Math.min(5,p.scale+delta)); document.getElementById('zoom').value=p.scale.toFixed(2); draw(); },{passive:false});
+
+  // Controls
+  document.getElementById('fileInput').addEventListener('change',(e)=>{ Array.from(e.target.files).forEach(f=>loadImageFile(f)); });
+  document.getElementById('addSample').addEventListener('click',()=>{ const svgs=[ '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#22c55e"/><stop offset="1" stop-color="#0ea5e9"/></linearGradient></defs><rect width="100%" height="100%" fill="url(#g)"/></svg>', '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="600"><rect width="100%" height="100%" fill="#f59e0b"/><circle cx="200" cy="300" r="120" fill="#111827"/></svg>', '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600"><rect width="100%" height="100%" fill="#9333ea"/><rect x="120" y="120" width="360" height="360" fill="#111827"/></svg>' ]; svgs.forEach(svg=>{ const url='data:image/svg+xml;base64,'+btoa(svg); const img=new Image(); img.onload=()=>{ addPhotoImage(img); }; img.src=url; }); });
+  document.getElementById('clearPhotos').addEventListener('click',()=>{ photos=[]; selectedId=null; pushHistory(); draw(); });
+  document.getElementById('removeSelected').addEventListener('click',()=>{ if(selectedId===null) return; const idx=photos.findIndex(p=>p.id===selectedId); if(idx>=0){ photos.splice(idx,1); selectedId = photos.length?photos[Math.max(0,idx-1)].id:null; pushHistory(); draw(); } });
+
+  document.getElementById('bgColor').addEventListener('input',(e)=>{ background.color=e.target.value; draw(); });
+  document.getElementById('bgImage').addEventListener('change',(e)=>{ const f=e.target.files[0]; if(!f) return; loadImageFile(f,true); });
+  document.getElementById('clearBgImg').addEventListener('click',()=>{ background.image=null; draw(); });
+
+  document.getElementById('aspect').addEventListener('change',(e)=>{ aspect=parseFloat(e.target.value); updateCanvasSize(); draw(); });
+  document.getElementById('size').addEventListener('change',(e)=>{ CANVAS_BASE_SIZE=parseInt(e.target.value); updateCanvasSize(); draw(); });
+
+  document.getElementById('showBorder').addEventListener('change',(e)=>{ showBorder=e.target.checked; draw(); });
+  document.getElementById('borderPx').addEventListener('input',(e)=>{ borderPx=parseInt(e.target.value); draw(); });
+
+  document.getElementById('zoom').addEventListener('input',(e)=>{ const p=selected(); if(!p) return; p.scale=parseFloat(e.target.value); draw(); });
+  document.getElementById('rotate').addEventListener('input',(e)=>{ const p=selected(); if(!p) return; p.rot=parseFloat(e.target.value); draw(); });
+  document.getElementById('flipH').addEventListener('click',()=>{ const p=selected(); if(!p) return; p.flipX=!p.flipX; draw(); });
+  document.getElementById('flipV').addEventListener('click',()=>{ const p=selected(); if(!p) return; p.flipY=!p.flipY; draw(); });
+  document.getElementById('fitCell').addEventListener('click',()=>{ const p=selected(); if(!p) return; fitToCell(p); draw(); });
+  document.getElementById('centerImg').addEventListener('click',()=>{ const p=selected(); if(!p) return; p.x=0; p.y=0; draw(); });
+
+  filterPresetSel.addEventListener('change',(e)=>{ const f=applyPreset(e.target.value); if(filterTarget==='selected'){ const p=selected(); if(!p) return; p.filters=f; } else { collageFilter=f; } draw(); });
+  filterTargetRadios.forEach(r=> r.addEventListener('change', (e)=>{ filterTarget = e.target.value; }));
+  ['fBrightness','fContrast','fSaturate','fSepia','fHueRotate','fBlur'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', ()=>{ const f=filtersFromSliders(); if(filterTarget==='selected'){ const p=selected(); if(!p) return; p.filters=f; } else { collageFilter=f; } draw(); });
+  });
+  document.getElementById('applyToSelected').addEventListener('click',()=>{ const p=selected(); if(!p) return; p.filters=filtersFromSliders(); draw(); });
+  document.getElementById('applyToAll').addEventListener('click',()=>{ collageFilter=filtersFromSliders(); draw(); });
+  document.getElementById('clearFilters').addEventListener('click',()=>{ collageFilter=applyPreset('none'); photos.forEach(p=>p.filters=applyPreset('none')); setFilterSliders(collageFilter); draw(); });
+
+  document.getElementById('toggleOverlay').addEventListener('click',(e)=>{ showOverlay=!showOverlay; e.target.textContent = showOverlay? 'Hide grid overlay' : 'Show grid overlay'; draw(); });
+  document.getElementById('toggleSnap').addEventListener('click',(e)=>{ snapToCells=!snapToCells; e.target.textContent = 'Snap to cells: ' + (snapToCells?'ON':'OFF'); });
+
+  moveBtn.addEventListener('click',()=>{ moveMode=!moveMode; moveBtn.textContent = 'Move mode: ' + (moveMode?'ON':'OFF'); moveBtn.classList.toggle('mode-on', moveMode); });
+  moveToCellSel.addEventListener('change',()=>{ const p=selected(); if(!p) return; const target=parseInt(moveToCellSel.value); if(Number.isInteger(target)){ p.cellIndex=Math.min(Math.max(0,target), layout.cells.length-1); fitToCell(p); pushHistory(); draw(); } });
+
+  document.getElementById('exportPng').addEventListener('click',()=>{ exportImage('image/png'); });
+  document.getElementById('exportJpg').addEventListener('click',()=>{ exportImage('image/jpeg'); });
+
+  document.getElementById('saveJson').addEventListener('click',()=>{ saveSession(); });
+  document.getElementById('loadJson').addEventListener('change',(e)=>{ const f=e.target.files[0]; if(!f) return; loadSessionFile(f); });
+
+  // Photo loading
+  function loadImageFile(file,isBackground=false){ const reader=new FileReader(); reader.onload=(ev)=>{ const img=new Image(); img.onload=()=>{ if(isBackground){ background.image=img; draw(); } else { addPhotoImage(img); } }; img.src=ev.target.result; }; reader.readAsDataURL(file); }
+  let nextId=1;
+  function addPhotoImage(img){ const p={ id:nextId++, img, cellIndex:Math.min(photos.length, layout.cells.length-1), x:0, y:0, scale:1, rot:0, flipX:false, flipY:false, filters:applyPreset('none') }; photos.push(p); selectedId=p.id; fitToCell(p); pushHistory(); draw(); }
+  function fitToCell(p){ const r=cellRectPx(layout.cells[p.cellIndex]); const s=Math.max(r.w/p.img.naturalWidth, r.h/p.img.naturalHeight); p.scale=s; p.x=0; p.y=0; document.getElementById('zoom').value=p.scale.toFixed(2); document.getElementById('rotate').value=p.rot; }
+  function assignPhotosToCells(){ photos.forEach((p,i)=>{ p.cellIndex=Math.min(i, layout.cells.length-1); fitToCell(p); }); }
+
+  // Export
+  function exportImage(mime){ const off=document.createElement('canvas'); off.width=canvasWidth; off.height=canvasHeight; const oc=off.getContext('2d'); oc.fillStyle=background.color||'#111827'; oc.fillRect(0,0,canvasWidth,canvasHeight); if(background.image){ const img=background.image; const scale=Math.max(canvasWidth/img.naturalWidth, canvasHeight/img.naturalHeight); const w=img.naturalWidth*scale, h=img.naturalHeight*scale; const x=(canvasWidth-w)/2, y=(canvasHeight-h)/2; oc.drawImage(img,x,y,w,h); } if(showBorder && borderPx>0 && layout.cells.length>1){ oc.fillStyle='#ffffff'; layout.cells.forEach(c=>{ const r=cellRectPx(c); oc.fillRect(r.x-Math.floor(borderPx/2), r.y-Math.floor(borderPx/2), r.w+borderPx, r.h+borderPx); }); oc.save(); oc.globalCompositeOperation='destination-out'; layout.cells.forEach(c=>{ const r=cellRectPx(c); oc.fillRect(r.x,r.y,r.w,r.h); }); oc.restore(); layout.cells.forEach(c=>{ const r=cellRectPx(c); oc.fillStyle=background.color||'#111827'; oc.fillRect(r.x,r.y,r.w,r.h); if(background.image){ const img=background.image; const scale=Math.max(canvasWidth/img.naturalWidth, canvasHeight/img.naturalHeight); const w=img.naturalWidth*scale, h=img.naturalHeight*scale; const x=(canvasWidth-w)/2, y=(canvasHeight-h)/2; oc.drawImage(img,x,y,w,h);} }); } oc.filter=ctxFilterString(collageFilter); layout.cells.forEach((cell,ci)=>{ const r=cellRectPx(cell); oc.save(); oc.beginPath(); oc.rect(r.x,r.y,r.w,r.h); oc.clip(); photos.filter(p=>p.cellIndex===ci).forEach(p=>{ oc.save(); oc.filter=ctxFilterString(collageFilter)+' '+ctxFilterString(p.filters||applyPreset('none')); const cx=r.x+r.w/2+p.x; const cy=r.y+r.h/2+p.y; oc.translate(cx,cy); const sx=p.flipX?-1:1, sy=p.flipY?-1:1; oc.scale(sx*p.scale, sy*p.scale); oc.rotate(p.rot*Math.PI/180); const iw=p.img.naturalWidth, ih=p.img.naturalHeight; oc.drawImage(p.img,-iw/2,-ih/2); oc.restore(); }); oc.restore(); }); const url=off.toDataURL(mime,0.92); const a=document.createElement('a'); a.href=url; a.download='collage.'+(mime==='image/png'?'png':'jpg'); document.body.appendChild(a); a.click(); a.remove(); }
+
+  // Save/Load
+  function saveSession(){ const data={ canvas:{base:CANVAS_BASE_SIZE,aspect}, background:{color:background.color,hasImage:!!background.image}, showBorder,borderPx, layoutIndex:PRESETS.indexOf(layout), collageFilter, photos:photos.map(p=>({cellIndex:p.cellIndex,x:p.x,y:p.y,scale:p.scale,rot:p.rot,flipX:p.flipX,flipY:p.flipY,filters:p.filters,src:p.img.src})) }; const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='collage-session.json'; a.click(); URL.revokeObjectURL(a.href); }
+  function loadSessionFile(file){ const reader=new FileReader(); reader.onload=(ev)=>{ try{ const data=JSON.parse(ev.target.result); loadSession(data); }catch(err){ alert('Invalid session file'); } }; reader.readAsText(file); }
+  function loadSession(data){ CANVAS_BASE_SIZE=data.canvas?.base||1200; aspect=data.canvas?.aspect||1; updateCanvasSize(); background.color=data.background?.color||'#111827'; background.image=null; showBorder=!!data.showBorder; borderPx=data.borderPx||10; collageFilter=data.collageFilter||applyPreset('none'); layout=PRESETS[data.layoutIndex||0]; layoutSel.value=data.layoutIndex||0; refreshMoveToCellOptions(); photos=[]; selectedId=null; nextId=1; const loadImg=(src)=>new Promise(resolve=>{ const img=new Image(); img.onload=()=>resolve(img); img.src=src; }); (async()=>{ for(const p of (data.photos||[])){ const img=await loadImg(p.src); const np={ id:nextId++, img, cellIndex:p.cellIndex||0, x:p.x||0, y:p.y||0, scale:p.scale||1, rot:p.rot||0, flipX:!!p.flipX, flipY:!!p.flipY, filters:p.filters||applyPreset('none') }; photos.push(np); } selectedId=photos.length?photos[0].id:null; draw(); })(); draw(); }
+
+  // Keyboard shortcuts
+  window.addEventListener('keydown',(e)=>{
+    const p = selected();
+    const key = e.key.toLowerCase();
+    const ctrl = e.ctrlKey || e.metaKey; const shift = e.shiftKey;
+    if(ctrl && !shift && key==='z'){ e.preventDefault(); restoreHistory(-1); return; }
+    if((ctrl && key==='y') || (ctrl && shift && key==='z')){ e.preventDefault(); restoreHistory(+1); return; }
+
+    if(key==='m'){ moveBtn.click(); }
+    else if(key==='g'){ document.getElementById('toggleOverlay').click(); }
+    else if(key==='s'){ document.getElementById('toggleSnap').click(); }
+    else if(key==='b'){ const chk=document.getElementById('showBorder'); chk.checked=!chk.checked; chk.dispatchEvent(new Event('change')); }
+    else if(key==='['){ if(!p) return; p.scale=Math.max(.2,Math.min(5,p.scale-0.05)); document.getElementById('zoom').value=p.scale.toFixed(2); draw(); }
+    else if(key===']'){ if(!p) return; p.scale=Math.max(.2,Math.min(5,p.scale+0.05)); document.getElementById('zoom').value=p.scale.toFixed(2); draw(); }
+    else if(key==='r'){ if(!p) return; if(shift){ p.rot = Math.round((p.rot+90)%360); } else { p.rot = 0; } document.getElementById('rotate').value=p.rot; draw(); }
+    else if(key==='delete' || key==='backspace'){ e.preventDefault(); const btn=document.getElementById('removeSelected'); btn.click(); }
+    else if(['arrowup','arrowdown','arrowleft','arrowright'].includes(e.key.toLowerCase())){
+      if(!p || moveMode) return; e.preventDefault(); const step = shift?10:2; if(key==='arrowup'){ p.y -= step; } else if(key==='arrowdown'){ p.y += step; } else if(key==='arrowleft'){ p.x -= step; } else if(key==='arrowright'){ p.x += step; } draw();
+    }
+  });
+
+  // Initial draw
+  setFilterSliders(collageFilter); pushHistory(); draw();
+})();
+</script>
+</body>
+</html>
