@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Simple Layout-Style Collage (v3: Custom Grid, Remove, Filter Target, Shortcuts)</title>
+  <title>Simple Grid Collage </title>
   <style>
     :root{
       --bg:#0f172a; --panel:#111827; --accent:#22c55e; --text:#e5e7eb; --muted:#9ca3af; --danger:#ef4444; --amber:#f59e0b;
@@ -45,7 +45,7 @@
 <body>
   <header>
     <span class="badge">Collage</span>
-    <h1>Simple Layout‑style Photo Collage</h1>
+    <h1>Simple Photo Collage</h1>
     <div class="spacer"></div>
     <button id="exportPng" class="primary">Export PNG</button>
     <button id="exportJpg" class="secondary">Export JPG</button>
