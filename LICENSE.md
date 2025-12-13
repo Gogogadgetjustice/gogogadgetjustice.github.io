@@ -9,8 +9,9 @@ Adapt — remix, transform, and build upon the material.
 
 Under the following terms:
 
-Attribution — We must give appropriate credit and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests I endorses you or your use. I would still appreciate you reaching out about it as a courtesy. I like neat things. 
-NonCommercial — You may not use the material for commercial purposes. Commercial purposes are defined as "primarily intended for or directed toward commercial advantage or monetary compensation."
+Attribution — We must give appropriate credit and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests I endorsed you or your use. I would still appreciate you reaching out about it as a courtesy. I like neat things. 
+
+NonCommercial — You may not use the material for commercial purposes. Commercial purposes are defined as "primarily intended for or directed toward commercial advantage or monetary compensation.
 
 . It allows reusers to distribute, remix, adapt, and build upon the material in any medium or format, for noncommercial purposes only. If others modify or adapt the material, they must license the modified material under identical terms.
 
