@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Layering Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 700px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .upload-section {
+            margin-bottom: 30px;
+        }
+        
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+        
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+        
+        .file-input-label {
+            display: block;
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            text-align: center;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        
+        .file-input-label:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .tracks-list {
+            margin-bottom: 30px;
+        }
+        
+        .track-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .track-info {
+            flex: 1;
+            margin-right: 15px;
+        }
+        
+        .track-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .volume-control label {
+            font-size: 12px;
+            color: #666;
+            min-width: 50px;
+        }
+        
+        .volume-control input[type=range] {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .volume-control input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+        
+        .volume-control input[type=range]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .remove-btn {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+        
+        .remove-btn:hover {
+            background: #ff5252;
+            transform: scale(1.05);
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        
+        .control-btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+            max-width: 200px;
+        }
+        
+        .play-btn {
+            background: #51cf66;
+            color: white;
+        }
+        
+        .play-btn:hover:not(:disabled) {
+            background: #40c057;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(81, 207, 102, 0.4);
+        }
+        
+        .stop-btn {
+            background: #ff6b6b;
+            color: white;
+        }
+        
+        .stop-btn:hover:not(:disabled) {
+            background: #ff5252;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+        
+        .download-btn {
+            background: #4dabf7;
+            color: white;
+        }
+        
+        .download-btn:hover:not(:disabled) {
+            background: #339af0;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(77, 171, 247, 0.4);
+        }
+        
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Audio Layering Tool</h1>
+        <p class="subtitle">Upload multiple audio tracks and play them simultaneously</p>
+        
+        <div class="upload-section">
+            <div class="file-input-wrapper">
+                <input type="file" id="audioFile" accept="audio/*" multiple>
+                <label for="audioFile" class="file-input-label">
+                    📁 Add Audio Track(s)
+                </label>
+            </div>
+        </div>
+        
+        <div class="tracks-list" id="tracksList">
+            <div class="empty-state">No tracks added yet. Upload audio files to get started!</div>
+        </div>
+        
+        <div class="controls">
+            <button class="control-btn play-btn" id="playBtn" disabled>▶ Play All</button>
+            <button class="control-btn stop-btn" id="stopBtn" disabled>⏹ Stop</button>
+        </div>
+        
+        <div class="controls" style="margin-top: 15px;">
+            <button class="control-btn download-btn" id="downloadBtn" disabled>💾 Download Mix</button>
+        </div>
+    </div>
+    
+    <script>
+        const tracks = [];
+        const audioElements = [];
+        
+        const fileInput = document.getElementById('audioFile');
+        const tracksList = document.getElementById('tracksList');
+        const playBtn = document.getElementById('playBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        
+        let audioContext;
+        let mixedBuffer;
+        
+        fileInput.addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            files.forEach(file => {
+                addTrack(file);
+            });
+            fileInput.value = '';
+            updateUI();
+        });
+        
+        function addTrack(file) {
+            const url = URL.createObjectURL(file);
+            const audio = new Audio(url);
+            
+            const track = {
+                id: Date.now() + Math.random(),
+                name: file.name,
+                url: url,
+                audio: audio,
+                volume: 1
+            };
+            
+            tracks.push(track);
+            audioElements.push(audio);
+        }
+        
+        function removeTrack(id) {
+            const index = tracks.findIndex(t => t.id === id);
+            if (index !== -1) {
+                const track = tracks[index];
+                track.audio.pause();
+                URL.revokeObjectURL(track.url);
+                tracks.splice(index, 1);
+                audioElements.splice(index, 1);
+                updateUI();
+            }
+        }
+        
+        function updateUI() {
+            if (tracks.length === 0) {
+                tracksList.innerHTML = '<div class="empty-state">No tracks added yet. Upload audio files to get started!</div>';
+                playBtn.disabled = true;
+                stopBtn.disabled = true;
+                downloadBtn.disabled = true;
+                return;
+            }
+            
+            playBtn.disabled = false;
+            stopBtn.disabled = false;
+            downloadBtn.disabled = false;
+            
+            tracksList.innerHTML = tracks.map(track => `
+                <div class="track-item">
+                    <div class="track-info">
+                        <div class="track-name">${track.name}</div>
+                        <div class="volume-control">
+                            <label>Volume:</label>
+                            <input type="range" min="0" max="100" value="${track.volume * 100}" 
+                                   onchange="updateVolume('${track.id}', this.value)">
+                            <span>${Math.round(track.volume * 100)}%</span>
+                        </div>
+                    </div>
+                    <button class="remove-btn" onclick="removeTrack('${track.id}')">Remove</button>
+                </div>
+            `).join('');
+        }
+        
+        function updateVolume(id, value) {
+            const track = tracks.find(t => t.id == id);
+            if (track) {
+                track.volume = value / 100;
+                track.audio.volume = track.volume;
+                updateUI();
+            }
+        }
+        
+        playBtn.addEventListener('click', function() {
+            audioElements.forEach(audio => {
+                audio.currentTime = 0;
+                audio.play();
+            });
+            playBtn.textContent = '⏸ Pause';
+            playBtn.onclick = pauseAll;
+        });
+        
+        function pauseAll() {
+            audioElements.forEach(audio => {
+                audio.pause();
+            });
+            playBtn.textContent = '▶ Resume';
+            playBtn.onclick = resumeAll;
+        }
+        
+        function resumeAll() {
+            audioElements.forEach(audio => {
+                audio.play();
+            });
+            playBtn.textContent = '⏸ Pause';
+            playBtn.onclick = pauseAll;
+        }
+        
+        stopBtn.addEventListener('click', function() {
+            audioElements.forEach(audio => {
+                audio.pause();
+                audio.currentTime = 0;
+            });
+            playBtn.textContent = '▶ Play All';
+            playBtn.onclick = function() {
+                audioElements.forEach(audio => {
+                    audio.currentTime = 0;
+                    audio.play();
+                });
+                playBtn.textContent = '⏸ Pause';
+                playBtn.onclick = pauseAll;
+            };
+        });
+        
+        // Make functions available globally
+        window.removeTrack = removeTrack;
+        window.updateVolume = updateVolume;
+        
+        // Download functionality
+        downloadBtn.addEventListener('click', async function() {
+            downloadBtn.disabled = true;
+            downloadBtn.textContent = '⏳ Mixing...';
+            
+            try {
+                await mixAndDownload();
+                downloadBtn.textContent = '💾 Download Mix';
+                downloadBtn.disabled = false;
+            } catch (error) {
+                alert('Error mixing audio: ' + error.message);
+                downloadBtn.textContent = '💾 Download Mix';
+                downloadBtn.disabled = false;
+            }
+        });
+        
+        async function mixAndDownload() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            // Load and decode all audio files
+            const buffers = await Promise.all(tracks.map(async track => {
+                const response = await fetch(track.url);
+                const arrayBuffer = await response.arrayBuffer();
+                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                return { buffer: audioBuffer, volume: track.volume };
+            }));
+            
+            // Find the longest duration
+            const maxDuration = Math.max(...buffers.map(b => b.buffer.duration));
+            const maxLength = Math.ceil(maxDuration * audioContext.sampleRate);
+            
+            // Create output buffer
+            const numberOfChannels = Math.max(...buffers.map(b => b.buffer.numberOfChannels));
+            const mixedBuffer = audioContext.createBuffer(
+                numberOfChannels,
+                maxLength,
+                audioContext.sampleRate
+            );
+            
+            // Mix all tracks
+            for (let channel = 0; channel < numberOfChannels; channel++) {
+                const outputData = mixedBuffer.getChannelData(channel);
+                
+                buffers.forEach(({ buffer, volume }) => {
+                    const channelData = buffer.getChannelData(Math.min(channel, buffer.numberOfChannels - 1));
+                    for (let i = 0; i < channelData.length; i++) {
+                        outputData[i] += channelData[i] * volume;
+                    }
+                });
+            }
+            
+            // Convert to WAV and download
+            const wav = audioBufferToWav(mixedBuffer);
+            const blob = new Blob([wav], { type: 'audio/wav' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'mixed-audio.wav';
+            a.click();
+            
+            URL.revokeObjectURL(url);
+        }
+        
+        function audioBufferToWav(buffer) {
+            const numChannels = buffer.numberOfChannels;
+            const sampleRate = buffer.sampleRate;
+            const format = 1; // PCM
+            const bitDepth = 16;
+            
+            const bytesPerSample = bitDepth / 8;
+            const blockAlign = numChannels * bytesPerSample;
+            
+            const data = [];
+            for (let i = 0; i < buffer.length; i++) {
+                for (let channel = 0; channel < numChannels; channel++) {
+                    const sample = buffer.getChannelData(channel)[i];
+                    const clampedSample = Math.max(-1, Math.min(1, sample));
+                    const intSample = clampedSample < 0 
+                        ? clampedSample * 0x8000 
+                        : clampedSample * 0x7FFF;
+                    data.push(intSample);
+                }
+            }
+            
+            const dataLength = data.length * bytesPerSample;
+            const buffer_array = new ArrayBuffer(44 + dataLength);
+            const view = new DataView(buffer_array);
+            
+            // RIFF header
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + dataLength, true);
+            writeString(view, 8, 'WAVE');
+            
+            // fmt chunk
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, format, true);
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * blockAlign, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bitDepth, true);
+            
+            // data chunk
+            writeString(view, 36, 'data');
+            view.setUint32(40, dataLength, true);
+            
+            let offset = 44;
+            for (let i = 0; i < data.length; i++) {
+                view.setInt16(offset, data[i], true);
+                offset += 2;
+            }
+            
+            return buffer_array;
+        }
+        
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+    </script>
+</body>
+</html>
