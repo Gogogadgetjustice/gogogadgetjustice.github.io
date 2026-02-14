@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STEGANOS — Invisible Ink for the Digital Age</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#030a06;--panel:#070f09;--border:#0f2914;--glow:#00ff41;--glow-dim:#00a82a;--glow-off:#004d13;--text:#b0ffc0;--muted:#3a6644;--red:#ff3c3c;--amber:#ffb800;--white:#e8ffe0}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;overflow-x:hidden}
+  body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.07) 2px,rgba(0,0,0,.07) 4px);pointer-events:none;z-index:999}
+  body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,.5) 100%);pointer-events:none;z-index:998;animation:flicker 8s infinite}
+  @keyframes flicker{0%,97%,100%{opacity:1}98%{opacity:.85}99%{opacity:1}99.5%{opacity:.9}}
+  .container{max-width:960px;margin:0 auto;padding:40px 24px 80px;position:relative;z-index:1}
+  header{text-align:center;margin-bottom:56px}
+  .logo{font-family:'Orbitron',monospace;font-size:clamp(2rem,6vw,4rem);font-weight:900;letter-spacing:.18em;color:var(--glow);text-shadow:0 0 10px var(--glow),0 0 30px var(--glow-dim),0 0 60px rgba(0,255,65,.2);animation:pulse 4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{text-shadow:0 0 10px var(--glow),0 0 30px var(--glow-dim),0 0 60px rgba(0,255,65,.2)}50%{text-shadow:0 0 16px var(--glow),0 0 50px var(--glow-dim),0 0 90px rgba(0,255,65,.3)}}
+  .tagline{font-family:'Space Mono',monospace;font-size:.72rem;letter-spacing:.35em;color:var(--muted);margin-top:10px;text-transform:uppercase}
+  .header-line{margin-top:28px;height:1px;background:linear-gradient(90deg,transparent,var(--glow-dim),var(--glow),var(--glow-dim),transparent);box-shadow:0 0 8px var(--glow-dim)}
+  .tabs{display:flex;gap:2px;margin-bottom:2px}
+  .tab{flex:1;padding:14px;background:var(--border);border:1px solid var(--border);border-bottom:none;font-family:'Orbitron',monospace;font-size:.75rem;letter-spacing:.12em;color:var(--muted);cursor:pointer;transition:all .2s;text-transform:uppercase;text-align:center}
+  .tab:hover{color:var(--glow-dim);border-color:var(--glow-off)}
+  .tab.active{background:var(--panel);color:var(--glow);border-color:var(--glow-off);text-shadow:0 0 8px var(--glow-dim);position:relative}
+  .tab.active::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;background:var(--panel)}
+  .panel{background:var(--panel);border:1px solid var(--glow-off);box-shadow:0 0 30px rgba(0,255,65,.05),inset 0 0 60px rgba(0,0,0,.4);padding:40px;display:none;animation:fadeIn .3s ease}
+  .panel.active{display:block}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}
+  @media(max-width:640px){.two-col{grid-template-columns:1fr}}
+  .label{font-family:'Orbitron',monospace;font-size:.6rem;letter-spacing:.25em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .label::after{content:'';flex:1;height:1px;background:var(--border)}
+  .drop-zone{border:1px dashed var(--glow-off);background:rgba(0,255,65,.02);padding:36px 20px;text-align:center;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+  .drop-zone:hover,.drop-zone.drag-over{border-color:var(--glow-dim);background:rgba(0,255,65,.05);box-shadow:0 0 20px rgba(0,255,65,.08)}
+  .drop-zone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+  .drop-icon{font-size:2rem;margin-bottom:10px;display:block;color:var(--glow-off)}
+  .drop-text{font-size:.75rem;color:var(--muted);line-height:1.6}
+  .drop-text span{color:var(--glow-dim)}
+  .preview-wrap{position:relative;margin-top:14px;display:none}
+  .preview-wrap.visible{display:block}
+  .preview-img{width:100%;max-height:220px;object-fit:contain;border:1px solid var(--glow-off);display:block}
+  .img-meta{font-size:.65rem;color:var(--muted);margin-top:6px}
+  .capacity-bar-wrap{margin-top:10px}
+  .capacity-label{font-size:.65rem;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:4px}
+  .capacity-bar{height:4px;background:var(--border);position:relative;overflow:hidden}
+  .capacity-fill{height:100%;background:linear-gradient(90deg,var(--glow-dim),var(--glow));box-shadow:0 0 6px var(--glow-dim);transition:width .3s ease;width:0%}
+  .capacity-fill.warning{background:linear-gradient(90deg,var(--amber),#ff8800)}
+  .capacity-fill.danger{background:linear-gradient(90deg,var(--red),#f00)}
+  textarea{width:100%;background:rgba(0,0,0,.4);border:1px solid var(--glow-off);color:var(--text);font-family:'Space Mono',monospace;font-size:.78rem;line-height:1.7;padding:14px;resize:vertical;min-height:160px;outline:none;transition:border-color .2s,box-shadow .2s}
+  textarea:focus{border-color:var(--glow-dim);box-shadow:0 0 12px rgba(0,255,65,.1)}
+  textarea::placeholder{color:var(--muted)}
+  .char-count{font-size:.62rem;color:var(--muted);text-align:right;margin-top:5px}
+  .btn{display:block;width:100%;margin-top:28px;padding:16px;background:transparent;border:1px solid var(--glow-dim);color:var(--glow);font-family:'Orbitron',monospace;font-size:.78rem;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+  .btn::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(0,255,65,.1),transparent);transition:left .4s ease}
+  .btn:hover::before{left:100%}
+  .btn:hover{background:rgba(0,255,65,.07);box-shadow:0 0 20px rgba(0,255,65,.15);text-shadow:0 0 8px var(--glow-dim)}
+  .btn:disabled{border-color:var(--border);color:var(--muted);cursor:not-allowed;box-shadow:none}
+  .btn:disabled::before{display:none}
+  .status{margin-top:20px;padding:12px 16px;border-left:3px solid;font-size:.72rem;line-height:1.6;display:none;font-family:'Space Mono',monospace}
+  .status.show{display:block;animation:fadeIn .3s ease}
+  .status.ok{border-color:var(--glow);color:var(--glow-dim);background:rgba(0,255,65,.04)}
+  .status.err{border-color:var(--red);color:var(--red);background:rgba(255,60,60,.04)}
+  .decoded-output{margin-top:20px;display:none}
+  .decoded-output.show{display:block;animation:fadeIn .3s ease}
+  .decoded-box{background:rgba(0,0,0,.5);border:1px solid var(--glow-off);padding:18px;font-family:'Space Mono',monospace;font-size:.78rem;line-height:1.8;color:var(--white);white-space:pre-wrap;word-break:break-word;max-height:280px;overflow-y:auto}
+  .copy-btn{background:transparent;border:1px solid var(--glow-off);color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:.68rem;letter-spacing:.1em;padding:7px 16px;cursor:pointer;float:right;margin-top:8px;transition:all .2s}
+  .copy-btn:hover{color:var(--glow);border-color:var(--glow-dim)}
+  .info-bar{display:flex;gap:24px;margin-top:36px;padding-top:24px;border-top:1px solid var(--border);flex-wrap:wrap}
+  .info-item{font-size:.65rem;color:var(--muted);line-height:1.6}
+  .info-item strong{display:block;color:var(--glow-off);font-family:'Orbitron',monospace;font-size:.55rem;letter-spacing:.2em;margin-bottom:2px}
+  #enc-canvas,#dec-canvas{display:none}
+  .cursor{display:inline-block;width:8px;height:1em;background:var(--glow);vertical-align:text-bottom;animation:blink 1s step-end infinite;margin-left:2px}
+  @keyframes blink{50%{opacity:0}}
+  .download-wrap{margin-top:16px;display:none}
+  .download-wrap.show{display:block}
+  .download-link{display:inline-flex;align-items:center;gap:10px;padding:12px 24px;border:1px solid var(--glow);color:var(--glow);text-decoration:none;font-family:'Orbitron',monospace;font-size:.7rem;letter-spacing:.15em;text-transform:uppercase;transition:all .2s;box-shadow:0 0 12px rgba(0,255,65,.1)}
+  .download-link:hover{background:rgba(0,255,65,.08);box-shadow:0 0 24px rgba(0,255,65,.2)}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--glow);box-shadow:0 0 6px var(--glow);animation:blink 1.4s ease-in-out infinite}
+</style>
+</head>
+<body>
+<canvas id="enc-canvas"></canvas>
+<canvas id="dec-canvas"></canvas>
+<div class="container">
+  <header>
+    <div class="logo">STEGANOS<span class="cursor"></span></div>
+    <div class="tagline">LSB steganography &bull; PNG pixel layer encoding &bull; zero-server, client-side only</div>
+    <div class="header-line"></div>
+  </header>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('encode')">⬛ ENCODE — Hide Text</button>
+    <button class="tab" onclick="switchTab('decode')">🔍 DECODE — Extract Text</button>
+  </div>
+  <div class="panel active" id="panel-encode">
+    <div class="two-col">
+      <div>
+        <div class="label">01 / Carrier Image</div>
+        <div class="drop-zone" id="enc-drop" ondragover="ev(event,'enc-drop',true)" ondragleave="ev(event,'enc-drop',false)" ondrop="dropFile(event,'enc')">
+          <input type="file" accept="image/png,image/jpeg,image/gif,image/bmp,image/webp" onchange="loadImage(event,'enc')">
+          <span class="drop-icon">▦</span>
+          <div class="drop-text">Drop any image here<br><span>or click to browse</span><br><br>PNG, JPG, GIF, BMP, WEBP</div>
+        </div>
+        <div class="preview-wrap" id="enc-preview">
+          <img class="preview-img" id="enc-img" alt="preview">
+          <div class="img-meta" id="enc-meta"></div>
+          <div class="capacity-bar-wrap">
+            <div class="capacity-label"><span>CAPACITY USED</span><span id="cap-pct">0%</span></div>
+            <div class="capacity-bar"><div class="capacity-fill" id="cap-fill"></div></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="label">02 / Secret Message</div>
+        <textarea id="enc-text" placeholder="Type your secret message here…&#10;&#10;It will be invisibly embedded&#10;into the image's pixel data." oninput="updateCharCount()"></textarea>
+        <div class="char-count"><span id="char-count">0</span> chars &nbsp;|&nbsp; <span id="bit-count">0</span> bits needed</div>
+        <button class="btn" id="enc-btn" onclick="encode()" disabled>⬛ ENCODE &amp; DOWNLOAD</button>
+        <div class="status" id="enc-status"></div>
+        <div class="download-wrap" id="enc-download">
+          <a class="download-link" id="enc-link" download="steganos_encoded.png"><span class="dot"></span> DOWNLOAD ENCODED PNG</a>
+        </div>
+      </div>
+    </div>
+    <div class="info-bar">
+      <div class="info-item"><strong>Algorithm</strong>LSB (Least Significant Bit)</div>
+      <div class="info-item"><strong>Bits Per Pixel</strong>3 (R, G, B channels)</div>
+      <div class="info-item"><strong>Header</strong>32-bit message length prefix</div>
+      <div class="info-item"><strong>Output Format</strong>Always PNG (lossless)</div>
+      <div class="info-item"><strong>Privacy</strong>100% client-side, no uploads</div>
+    </div>
+  </div>
+  <div class="panel" id="panel-decode">
+    <div class="two-col">
+      <div>
+        <div class="label">01 / Encoded Image</div>
+        <div class="drop-zone" id="dec-drop" ondragover="ev(event,'dec-drop',true)" ondragleave="ev(event,'dec-drop',false)" ondrop="dropFile(event,'dec')">
+          <input type="file" accept="image/png" onchange="loadImage(event,'dec')">
+          <span class="drop-icon">🔍</span>
+          <div class="drop-text">Drop your encoded PNG here<br><span>or click to browse</span><br><br>Must be an unmodified PNG</div>
+        </div>
+        <div class="preview-wrap" id="dec-preview">
+          <img class="preview-img" id="dec-img" alt="preview">
+          <div class="img-meta" id="dec-meta"></div>
+        </div>
+      </div>
+      <div>
+        <div class="label">02 / Extraction</div>
+        <button class="btn" id="dec-btn" onclick="decode()" disabled>🔍 EXTRACT HIDDEN TEXT</button>
+        <div class="status" id="dec-status"></div>
+        <div class="decoded-output" id="dec-output">
+          <div class="label" style="margin-top:20px">Recovered Message</div>
+          <div class="decoded-box" id="dec-text"></div>
+          <button class="copy-btn" onclick="copyDecoded()">[ COPY ]</button>
+        </div>
+      </div>
+    </div>
+    <div class="info-bar">
+      <div class="info-item"><strong>Note</strong>Only works on images encoded by STEGANOS</div>
+      <div class="info-item"><strong>Warning</strong>Re-saving as JPEG destroys LSB data</div>
+      <div class="info-item"><strong>Privacy</strong>100% client-side, no uploads</div>
+    </div>
+  </div>
+</div>
+<script>
+const state={enc:{img:null,w:0,h:0},dec:{img:null}};
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',(i===0&&tab==='encode')||(i===1&&tab==='decode')));
+  document.getElementById('panel-encode').classList.toggle('active',tab==='encode');
+  document.getElementById('panel-decode').classList.toggle('active',tab==='decode');
+}
+function ev(e,id,on){e.preventDefault();document.getElementById(id).classList.toggle('drag-over',on)}
+function dropFile(e,prefix){
+  e.preventDefault();document.getElementById(prefix+'-drop').classList.remove('drag-over');
+  const file=e.dataTransfer.files[0];if(file)loadImageFile(file,prefix);
+}
+function loadImage(e,prefix){loadImageFile(e.target.files[0],prefix)}
+function loadImageFile(file,prefix){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=evt=>{
+    const img=new Image();
+    img.onload=()=>{
+      state[prefix].img=img;state[prefix].w=img.naturalWidth;state[prefix].h=img.naturalHeight;
+      document.getElementById(prefix+'-img').src=evt.target.result;
+      document.getElementById(prefix+'-preview').classList.add('visible');
+      const pixels=img.naturalWidth*img.naturalHeight;
+      const capBytes=Math.floor((pixels*3)/8)-4;
+      document.getElementById(prefix+'-meta').textContent=`${img.naturalWidth} × ${img.naturalHeight} px  •  ~${capBytes.toLocaleString()} bytes capacity`;
+      if(prefix==='enc'){document.getElementById('enc-btn').disabled=false;updateCharCount();resetEncStatus();}
+      else{document.getElementById('dec-btn').disabled=false;resetDecStatus();}
+    };img.src=evt.target.result;
+  };reader.readAsDataURL(file);
+}
+function updateCharCount(){
+  const txt=document.getElementById('enc-text').value;
+  const chars=txt.length;const bits=chars*8+32;
+  document.getElementById('char-count').textContent=chars.toLocaleString();
+  document.getElementById('bit-count').textContent=bits.toLocaleString();
+  if(!state.enc.img)return;
+  const capacity=state.enc.w*state.enc.h*3;
+  const pct=Math.min(100,(bits/capacity)*100);
+  const fill=document.getElementById('cap-fill');
+  fill.style.width=pct+'%';
+  fill.className='capacity-fill'+(pct>90?' danger':pct>70?' warning':'');
+  document.getElementById('cap-pct').textContent=pct.toFixed(1)+'%';
+}
+function resetEncStatus(){setStatus('enc-status','','');document.getElementById('enc-download').classList.remove('show')}
+function resetDecStatus(){setStatus('dec-status','','');document.getElementById('dec-output').classList.remove('show')}
+function setStatus(id,type,msg){const el=document.getElementById(id);el.className='status'+(type?' show '+type:'');el.textContent=msg}
+function encode(){
+  const img=state.enc.img;if(!img)return;
+  const message=document.getElementById('enc-text').value;
+  if(!message){setStatus('enc-status','err','✗ No message to encode.');return;}
+  const canvas=document.getElementById('enc-canvas');
+  canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
+  const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0);
+  const imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
+  const data=imageData.data;
+  const msgBytes=new TextEncoder().encode(message);
+  const msgLen=msgBytes.length;
+  const totalBitsNeeded=32+msgLen*8;
+  const totalBitsAvail=Math.floor(data.length/4)*3;
+  if(totalBitsNeeded>totalBitsAvail){setStatus('enc-status','err',`✗ Message too large. Need ${totalBitsNeeded} bits, image holds ${totalBitsAvail} bits.`);return;}
+  const bits=[];
+  for(let i=31;i>=0;i--)bits.push((msgLen>>i)&1);
+  for(const byte of msgBytes)for(let i=7;i>=0;i--)bits.push((byte>>i)&1);
+  let bitIdx=0;
+  for(let i=0;i<data.length&&bitIdx<bits.length;i++){if((i%4)===3)continue;data[i]=(data[i]&0xFE)|bits[bitIdx++];}
+  ctx.putImageData(imageData,0,0);
+  const url=canvas.toDataURL('image/png');
+  document.getElementById('enc-link').href=url;
+  document.getElementById('enc-download').classList.add('show');
+  setStatus('enc-status','ok',`✓ Encoded ${msgLen.toLocaleString()} bytes into ${(canvas.width*canvas.height).toLocaleString()} pixels. Visual change is imperceptible.`);
+}
+function decode(){
+  const img=state.dec.img;if(!img)return;
+  const canvas=document.getElementById('dec-canvas');
+  canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
+  const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0);
+  const imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
+  const data=imageData.data;
+  const lsbs=[];
+  for(let i=0;i<data.length;i++){if((i%4)===3)continue;lsbs.push(data[i]&1);}
+  if(lsbs.length<32){setStatus('dec-status','err','✗ Image too small.');return;}
+  let msgLen=0;
+  for(let i=0;i<32;i++)msgLen=(msgLen<<1)|lsbs[i];
+  if(msgLen<=0||msgLen>50000000){setStatus('dec-status','err','✗ No valid STEGANOS payload found. This image may not be encoded, or was re-saved lossy (e.g. JPEG).');return;}
+  const bitsNeeded=32+msgLen*8;
+  if(bitsNeeded>lsbs.length){setStatus('dec-status','err',`✗ Header claims ${msgLen} bytes but image is too small.`);return;}
+  const msgBytesOut=new Uint8Array(msgLen);
+  for(let b=0;b<msgLen;b++){let byte=0;for(let k=0;k<8;k++)byte=(byte<<1)|lsbs[32+b*8+k];msgBytesOut[b]=byte;}
+  let decoded;
+  try{decoded=new TextDecoder('utf-8',{fatal:true}).decode(msgBytesOut);}
+  catch{setStatus('dec-status','err','✗ Payload found but could not decode as UTF-8.');return;}
+  document.getElementById('dec-text').textContent=decoded;
+  document.getElementById('dec-output').classList.add('show');
+  setStatus('dec-status','ok',`✓ Extracted ${msgLen.toLocaleString()} bytes of hidden text.`);
+}
+function copyDecoded(){
+  const txt=document.getElementById('dec-text').textContent;
+  navigator.clipboard.writeText(txt).then(()=>{
+    const btn=document.querySelector('.copy-btn');btn.textContent='[ COPIED ✓ ]';
+    setTimeout(()=>btn.textContent='[ COPY ]',1600);
+  });
+}
+</script>
+</body>
+</html>
