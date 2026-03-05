@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WebAudio Modular Rack</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --panel-color: #1e1e1e;
+            --accent-color: #00ff9d;
+            --text-color: #e0e0e0;
+            --rec-color: #ff4757;
+            --play-color: #2ed573;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            height: 100vh;
+            overflow: hidden;
+            touch-action: manipulation; /* Prevents zoom on double tap */
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        button.start-btn {
+            background: var(--accent-color);
+            border: none;
+            padding: 10px 20px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        /* Grid Layout for Modules */
+        .rack-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            grid-template-rows: auto auto auto;
+            gap: 10px;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        @media (min-width: 768px) {
+            .rack-container {
+                grid-template-columns: 1fr 1fr 1fr;
+                grid-template-rows: 1fr;
+            }
+        }
+
+        .module {
+            background: var(--panel-color);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .module-title {
+            color: var(--accent-color);
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+        }
+
+        /* LOOPER STYLES */
+        .track {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            background: #2a2a2a;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        .track-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            margin-right: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-rec { background: #333; color: #666; }
+        .btn-rec.active { background: var(--rec-color); color: white; animation: pulse 1s infinite; }
+        .btn-play { background: #333; color: #666; }
+        .btn-play.active { background: var(--play-color); color: black; }
+        
+        .track-info { flex-grow: 1; font-size: 0.8rem; }
+        .level-bar { height: 4px; background: #444; width: 100%; margin-top: 5px; }
+        .level-fill { height: 100%; background: var(--accent-color); width: 0%; transition: width 0.1s; }
+
+        /* SYNTH STYLES */
+        .keyboard {
+            display: flex;
+            height: 120px;
+            width: 100%;
+            position: relative;
+            margin-top: auto;
+        }
+        .key {
+            flex: 1;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 0 0 4px 4px;
+            margin: 0 1px;
+            position: relative;
+        }
+        .key.black {
+            background: black;
+            color: white;
+            height: 60%;
+            width: 6%;
+            position: absolute;
+            z-index: 2;
+            border-radius: 0 0 4px 4px;
+        }
+        .key:active, .key.pressed { background: var(--accent-color); }
+        .key.black:active, .key.black.pressed { background: var(--accent-color); }
+
+        select {
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 5px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        /* FX STYLES */
+        .knob-container {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+        .knob {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        input[type=range] {
+            transform: rotate(-90deg);
+            width: 80px;
+            margin: 40px 0;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div>BASIC PIANO LOOP LITE WEB RACK</div>
+    <button class="start-btn" id="initAudio">START AUDIO ENGINE</button>
+</header>
+
+<div class="rack-container">
+    
+    <!-- MODULE 1: LOOPER -->
+    <div class="module" id="looper-module">
+        <div class="module-title">Loop Station (4-Track)</div>
+        <div id="tracks-container">
+            <!-- Tracks generated by JS -->
+        </div>
+        <div style="margin-top:10px; font-size: 0.7rem; color: #888;">
+            *Tap REC to arm, Tap again to record. Tap PLAY to loop.
+        </div>
+    </div>
+
+    <!-- MODULE 2: SYNTH -->
+    <div class="module" id="synth-module">
+        <div class="module-title">Virtual Keys & Synth</div>
+        <select id="patch-select">
+            <option value="sine">Pure Sine (Clean)</option>
+            <option value="square">Square (8-Bit)</option>
+            <option value="sawtooth">Sawtooth (Sharp)</option>
+            <option value="triangle">Triangle (Soft)</option>
+        </select>
+        <div class="keyboard" id="keyboard">
+            <!-- Keys generated by JS -->
+        </div>
+    </div>
+
+    <!-- MODULE 3: FX / MIXER -->
+    <div class="module" id="fx-module">
+        <div class="module-title">Global FX & Mix</div>
+        <div class="knob-container">
+            <div class="knob">
+                <label>Reverb</label>
+                <input type="range" id="reverb-knob" min="0" max="1" step="0.01" value="0.2">
+            </div>
+            <div class="knob">
+                <label>Delay</label>
+                <input type="range" id="delay-knob" min="0" max="0.5" step="0.01" value="0">
+            </div>
+            <div class="knob">
+                <label>Master</label>
+                <input type="range" id="master-knob" min="0" max="1" step="0.01" value="0.8">
+            </div>
+        </div>
+        <div style="margin-top: 20px; text-align: center;">
+            <button id="clear-loops" style="background:#ff4757; border:none; color:white; padding:10px; width:100%;">CLEAR ALL LOOPS</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- AUDIO ENGINE CORE ---
+    let audioCtx;
+    let masterGain;
+    let reverbNode;
+    let delayNode;
+    let isAudioStarted = false;
+
+    // Initialize Audio Context (Must be triggered by user gesture)
+    document.getElementById('initAudio').addEventListener('click', async () => {
+        if (isAudioStarted) return;
+        
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        masterGain = audioCtx.createGain();
+        
+        // Create FX Chain
+        reverbNode = audioCtx.createConvolver();
+        // Simple impulse response for reverb
+        const rate = audioCtx.sampleRate;
+        const length = rate * 2; // 2 seconds
+        const impulse = audioCtx.createBuffer(2, length, rate);
+        const impulseL = impulse.getChannelData(0);
+        const impulseR = impulse.getChannelData(1);
+        for (let i = 0; i < length; i++) {
+            const decay = Math.pow(1 - i / length, 2);
+            impulseL[i] = (Math.random() * 2 - 1) * decay;
+            impulseR[i] = (Math.random() * 2 - 1) * decay;
+        }
+        reverbNode.buffer = impulse;
+
+        delayNode = audioCtx.createDelay();
+        delayNode.delayTime.value = 0.3;
+        const delayFeedback = audioCtx.createGain();
+        delayFeedback.gain.value = 0.4;
+
+        // Routing: Source -> FX -> Master -> Destination
+        // We will connect individual instruments to 'masterGain' directly, 
+        // and 'masterGain' will split to Dry/Wet FX
+        
+        const dryGain = audioCtx.createGain();
+        const wetGain = audioCtx.createGain();
+        
+        masterGain.connect(dryGain);
+        masterGain.connect(reverbNode);
+        reverbNode.connect(wetGain);
+        masterGain.connect(delayNode);
+        delayNode.connect(delayFeedback);
+        delayFeedback.connect(delayNode); // Feedback loop
+        delayNode.connect(wetGain);
+
+        wetGain.connect(audioCtx.destination);
+        dryGain.connect(audioCtx.destination);
+
+        // UI Controls for FX
+        document.getElementById('reverb-knob').addEventListener('input', (e) => {
+            wetGain.gain.value = e.target.value;
+            dryGain.gain.value = 1 - e.target.value;
+        });
+        
+        document.getElementById('delay-knob').addEventListener('input', (e) => {
+            delayFeedback.gain.value = e.target.value * 2; 
+        });
+
+        document.getElementById('master-knob').addEventListener('input', (e) => {
+            masterGain.gain.value = e.target.value;
+        });
+
+        document.getElementById('initAudio').style.display = 'none';
+        isAudioStarted = true;
+        initLooper();
+        initSynth();
+    });
+
+    // --- SYNTH MODULE ---
+    function initSynth() {
+        const keyboard = document.getElementById('keyboard');
+        const notes = [
+            { note: 'C', freq: 261.63, type: 'white' },
+            { note: 'C#', freq: 277.18, type: 'black', offset: 10 },
+            { note: 'D', freq: 293.66, type: 'white' },
+            { note: 'D#', freq: 311.13, type: 'black', offset: 23 },
+            { note: 'E', freq: 329.63, type: 'white' },
+            { note: 'F', freq: 349.23, type: 'white' },
+            { note: 'F#', freq: 369.99, type: 'black', offset: 48 },
+            { note: 'G', freq: 392.00, type: 'white' },
+            { note: 'G#', freq: 415.30, type: 'black', offset: 61 },
+            { note: 'A', freq: 440.00, type: 'white' },
+            { note: 'A#', freq: 466.16, type: 'black', offset: 74 },
+            { note: 'B', freq: 493.88, type: 'white' },
+            { note: 'C2', freq: 523.25, type: 'white' }
+        ];
+
+        notes.forEach(n => {
+            const key = document.createElement('div');
+            key.className = `key ${n.type}`;
+            if(n.type === 'black') {
+                key.style.left = n.offset + '%';
+            }
+            
+            // Touch/Mouse Events
+            const startNote = (e) => {
+                e.preventDefault();
+                if(!isAudioStarted) return;
+                key.classList.add('pressed');
+                playTone(n.freq);
+            };
+            
+            const endNote = (e) => {
+                e.preventDefault();
+                key.classList.remove('pressed');
+                stopTone();
+            };
+
+            key.addEventListener('mousedown', startNote);
+            key.addEventListener('mouseup', endNote);
+            key.addEventListener('touchstart', startNote);
+            key.addEventListener('touchend', endNote);
+            
+            keyboard.appendChild(key);
+        });
+    }
+
+    let currentOscillator = null;
+    let currentGain = null;
+
+    function playTone(freq) {
+        if(currentOscillator) stopTone();
+        
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        
+        osc.type = document.getElementById('patch-select').value;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        
+        gain.gain.setValueAtTime(0, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.05); // Attack
+        
+        osc.connect(gain);
+        gain.connect(masterGain); // Connect to the main mix
+        
+        osc.start();
+        currentOscillator = osc;
+        currentGain = gain;
+    }
+
+    function stopTone() {
+        if(currentGain) {
+            currentGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1); // Release
+            setTimeout(() => {
+                if(currentOscillator) currentOscillator.stop();
+                currentOscillator = null;
+            }, 100);
+        }
+    }
+
+    // --- LOOPER MODULE ---
+    // Simplified 4-track looper logic
+    const tracks = [];
+    const numTracks = 4;
+
+    function initLooper() {
+        const container = document.getElementById('tracks-container');
+        
+        for(let i=0; i<numTracks; i++) {
+            tracks.push({
+                id: i,
+                isRecording: false,
+                isPlaying: false,
+                bufferSource: null,
+                mediaRecorder: null,
+                audioChunks: [],
+                recordedBuffer: null
+            });
+
+            const trackEl = document.createElement('div');
+            trackEl.className = 'track';
+            trackEl.innerHTML = `
+                <button class="track-btn btn-rec" id="rec-${i}">REC</button>
+                <button class="track-btn btn-play" id="play-${i}">PLAY</button>
+                <div class="track-info">
+                    <div>TRACK ${i+1}</div>
+                    <div class="level-bar"><div class="level-fill" id="level-${i}"></div></div>
+                </div>
+            `;
+            container.appendChild(trackEl);
+
+            // Bind Buttons
+            document.getElementById(`rec-${i}`).addEventListener('click', () => toggleRecord(i));
+            document.getElementById(`play-${i}`).addEventListener('click', () => togglePlay(i));
+        }
+    }
+
+    function toggleRecord(trackId) {
+        const track = tracks[trackId];
+        const btn = document.getElementById(`rec-${trackId}`);
+
+        if (track.isRecording) {
+            // Stop Recording
+            track.mediaRecorder.stop();
+            track.isRecording = false;
+            btn.classList.remove('active');
+            btn.innerText = "REC";
+        } else {
+            // Start Recording
+            // We create a destination to record the Master Output (simplified)
+            // In a real app, you'd use a specific input node. 
+            // Here we will just record silence or use the microphone input if available.
+            // FOR THIS DEMO: We will simulate recording by capturing the Master Output via ScriptProcessor (deprecated but works for demo) 
+            // OR simpler: We assume the user wants to loop the Synth.
+            
+            // Let's use MediaRecorder on the destination stream if supported, 
+            // otherwise we just flag the track as "Armed" to record the next synth note.
+            
+            // *Simplified Approach for Web Demo*: 
+            // We will use the Microphone input for the looper to make it functional immediately.
+            if (!navigator.mediaDevices) {
+                alert("Microphone access needed for Looper!");
+                return;
+            }
+
+            navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                track.mediaRecorder = new MediaRecorder(stream);
+                track.audioChunks = [];
+                
+                track.mediaRecorder.ondataavailable = event => {
+                    track.audioChunks.push(event.data);
+                };
+
+                track.mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(track.audioChunks, { type: 'audio/wav' });
+                    const arrayBuffer = await audioBlob.arrayBuffer();
+                    track.recordedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                    document.getElementById(`level-${trackId}`).style.width = "100%";
+                    document.getElementById(`level-${trackId}`).style.background = "#00ff9d";
+                };
+
+                track.mediaRecorder.start();
+                track.isRecording = true;
+                btn.classList.add('active');
+                btn.innerText = "STOP";
+            });
+        }
+    }
+
+    function togglePlay(trackId) {
+        const track = tracks[trackId];
+        const btn = document.getElementById(`play-${trackId}`);
+
+        if (track.isPlaying) {
+            if(track.bufferSource) track.bufferSource.stop();
+            track.isPlaying = false;
+            btn.classList.remove('active');
+        } else {
+            if (track.recordedBuffer) {
+                const source = audioCtx.createBufferSource();
+                source.buffer = track.recordedBuffer;
+                source.loop = true;
+                source.connect(masterGain);
+                source.start(0);
+                track.bufferSource = source;
+                track.isPlaying = true;
+                btn.classList.add('active');
+            } else {
+                alert("No audio recorded on this track yet!");
+            }
+        }
+    }
+
+    document.getElementById('clear-loops').addEventListener('click', () => {
+        tracks.forEach((t, i) => {
+            if(t.bufferSource) t.bufferSource.stop();
+            t.recordedBuffer = null;
+            t.isPlaying = false;
+            document.getElementById(`play-${i}`).classList.remove('active');
+            document.getElementById(`level-${i}`).style.width = "0%";
+            document.getElementById(`level-${i}`).style.background = "#444";
+        });
+    });
+
+</script>
+</body>
+</html>
