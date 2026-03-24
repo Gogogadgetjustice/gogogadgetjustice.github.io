@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ABOR Policy Manual Quick Reference</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f3; color: #1a1a18; min-height: 100vh; padding: 2rem 1rem; }
+  .container { max-width: 820px; margin: 0 auto; }
+  .hero { margin-bottom: 1.5rem; }
+  .hero h1 { font-size: 22px; font-weight: 500; color: #1a1a18; margin-bottom: 4px; }
+  .hero p { font-size: 14px; color: #666; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+  .stat { background: #eeeee9; border-radius: 8px; padding: 12px; }
+  .stat-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+  .stat-val { font-size: 20px; font-weight: 500; color: #1a1a18; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .tab { font-size: 13px; padding: 6px 14px; border-radius: 8px; border: 0.5px solid #ccc; background: transparent; color: #666; cursor: pointer; }
+  .tab.active { background: #deeaf7; color: #185fa5; border-color: #a8c8ef; font-weight: 500; }
+  .tab:hover:not(.active) { background: #eeeee9; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .chapter { background: #fff; border: 0.5px solid #ddd; border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
+  .ch-header { padding: 12px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
+  .ch-header:hover { background: #f7f7f5; }
+  .ch-num { font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 8px; background: #deeaf7; color: #185fa5; min-width: 36px; text-align: center; white-space: nowrap; }
+  .ch-title { font-size: 15px; font-weight: 500; color: #1a1a18; flex: 1; }
+  .ch-arrow { font-size: 12px; color: #bbb; transition: transform 0.2s; }
+  .ch-body { display: none; border-top: 0.5px solid #eee; padding: 12px 16px; }
+  .ch-body.open { display: block; }
+  .policy-item { margin-bottom: 10px; }
+  .policy-num { font-size: 12px; color: #185fa5; font-weight: 500; margin-bottom: 2px; }
+  .policy-name { font-size: 14px; font-weight: 500; color: #1a1a18; margin-bottom: 3px; }
+  .policy-desc { font-size: 13px; color: #555; line-height: 1.5; }
+  .tag { display: inline-block; font-size: 11px; padding: 2px 7px; border-radius: 8px; margin-right: 4px; margin-top: 4px; }
+  .tag-key { background: #faeeda; color: #633806; }
+  .tag-hr  { background: #eaf3de; color: #27500a; }
+  .tag-student { background: #deeaf7; color: #0c447c; }
+  .tag-fin { background: #faeeda; color: #633806; }
+  .divider { height: 0.5px; background: #eee; margin: 8px 0; }
+  .tip-box { background: #faeeda; border: 0.5px solid #f5c97a; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; font-size: 13px; color: #633806; line-height: 1.5; }
+  .tip-box strong { font-weight: 500; }
+  .quiz-q { font-size: 15px; font-weight: 500; color: #1a1a18; margin-bottom: 12px; line-height: 1.5; }
+  .quiz-opt { display: block; width: 100%; text-align: left; padding: 10px 14px; margin-bottom: 8px; border: 0.5px solid #ccc; border-radius: 8px; background: transparent; color: #1a1a18; font-size: 14px; cursor: pointer; font-family: inherit; }
+  .quiz-opt:hover { background: #f7f7f5; }
+  .quiz-opt.correct { background: #eaf3de; border-color: #8abf5a; color: #27500a; }
+  .quiz-opt.wrong { background: #fcebeb; border-color: #e88; color: #501313; }
+  .quiz-feedback { font-size: 13px; color: #555; margin-top: 8px; padding: 10px; border-radius: 8px; background: #f7f7f5; display: none; line-height: 1.5; }
+  .next-btn { margin-top: 12px; padding: 8px 18px; border-radius: 8px; border: 0.5px solid #ccc; background: transparent; color: #1a1a18; font-size: 14px; cursor: pointer; display: none; font-family: inherit; }
+  .next-btn:hover { background: #eeeee9; }
+  .progress { display: flex; gap: 6px; margin-bottom: 16px; }
+  .prog-dot { width: 8px; height: 8px; border-radius: 50%; background: #ddd; }
+  .prog-dot.done { background: #8abf5a; }
+  .prog-dot.cur { background: #378add; }
+  .score-box { text-align: center; padding: 20px; }
+  .score-big { font-size: 40px; font-weight: 500; color: #1a1a18; }
+  .score-label { font-size: 14px; color: #888; margin-top: 4px; }
+  .action-btn { display: block; width: 100%; text-align: left; padding: 10px 14px; margin-bottom: 8px; border: 0.5px solid #ccc; border-radius: 8px; background: transparent; color: #1a1a18; font-size: 14px; cursor: pointer; font-family: inherit; }
+  .action-btn:hover { background: #f7f7f5; }
+  @media (max-width: 500px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="hero">
+    <h1>ABOR Policy Manual Review</h1>
+    <p>Arizona Board of Regents · Governing ASU, NAU &amp; University of Arizona · Policy manual adopted March 12, 1983</p>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-label">Chapters</div><div class="stat-val">9</div></div>
+    <div class="stat"><div class="stat-label">Universities</div><div class="stat-val">3</div></div>
+    <div class="stat"><div class="stat-label">Board members</div><div class="stat-val">12</div></div>
+    <div class="stat"><div class="stat-label">Est.</div><div class="stat-val">1885</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showPanel('overview', this)">Overview</button>
+    <button class="tab" onclick="showPanel('chapters', this)">Policy chapters</button>
+    <button class="tab" onclick="showPanel('key', this)">Key policies</button>
+    <button class="tab" onclick="showPanel('tips', this)">Expert tips</button>
+    <button class="tab" onclick="showPanel('quiz', this)">Quiz yourself</button>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div id="panel-overview" class="panel active">
+    <div class="chapter">
+      <div class="ch-header" onclick="toggle(this)">
+        <span class="ch-num">What</span>
+        <span class="ch-title">What is ABOR?</span>
+        <span class="ch-arrow">▼</span>
+      </div>
+      <div class="ch-body open">
+        <div class="policy-desc" style="line-height:1.6;margin-bottom:10px">ABOR is Arizona's constitutionally created governing body for public universities. It exists on a legal plane equivalent to the state legislature — it's not a state agency, it's a <em>body corporate</em> created by the Arizona Constitution (Article XI, §5). It governs under Title 15 of the Arizona Revised Statutes (A.R.S.).</div>
+        <div class="policy-desc" style="line-height:1.6">The Policy Manual, first adopted <strong style="font-weight:500">March 12, 1983</strong>, is the <em>complete and official</em> body of governance policy for the Arizona University System. Universities cannot create policies that conflict with it — ABOR policy supersedes university-level policy.</div>
+      </div>
+    </div>
+    <div class="chapter">
+      <div class="ch-header" onclick="toggle(this)">
+        <span class="ch-num">Who</span>
+        <span class="ch-title">Board composition</span>
+        <span class="ch-arrow">▼</span>
+      </div>
+      <div class="ch-body open">
+        <div class="policy-item">
+          <div class="policy-name">8 appointed members</div>
+          <div class="policy-desc">Volunteer citizens appointed by the Governor to staggered 8-year terms. Confirmed by the Arizona Senate.</div>
+        </div>
+        <div class="divider"></div>
+        <div class="policy-item">
+          <div class="policy-name">2 student members</div>
+          <div class="policy-desc">Serve 2-year appointments. Year 1 = non-voting apprentice. Year 2 = full voting member.</div>
+        </div>
+        <div class="divider"></div>
+        <div class="policy-item">
+          <div class="policy-name">2 ex officio members</div>
+          <div class="policy-desc">The Governor and the Superintendent of Public Instruction serve as voting ex officio members.</div>
+        </div>
+      </div>
+    </div>
+    <div class="chapter">
+      <div class="ch-header" onclick="toggle(this)">
+        <span class="ch-num">How</span>
+        <span class="ch-title">How policies are made &amp; changed</span>
+        <span class="ch-arrow">▼</span>
+      </div>
+      <div class="ch-body open">
+        <div class="policy-desc" style="line-height:1.6">Policy changes require <strong style="font-weight:500">two readings</strong> at Board meetings before adoption — first reading introduces the change, second reading is the vote for approval. This is noted in every policy's revision history (e.g., "approved by the Board on second reading"). Policies take effect as stated in the approval, often at the start of the next academic/appointment period.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAPTERS -->
+  <div id="panel-chapters" class="panel">
+    <div class="tip-box"><strong>How to read policy numbers:</strong> The first digit is the chapter. "6-201" = Chapter VI, Policy 201. Articles within chapters are labeled A, B, C…</div>
+
+    <div class="chapter">
+      <div class="ch-header" onclick="toggle(this)">
+        <span class="ch-num">Ch. I</span><span class="ch-title">The Board</span><span class="ch-arrow">▼</span>
+      </div>
+      <div class="ch-body">
+        <div class="policy-item"><div class="policy-num">1-101 to 1-120</div><div class="policy-name">Board organization &amp; authority</div><div class="policy-desc">Defines the Board's constitutional authority, structure, officers, meetings, quorum rules, and standing committees (Academic Affairs, Finance/Capital, Audit, Legislative Affairs).</div></div>
+        <div class="divider"></div>
+        <div class="policy-item"><div class="policy-num">1-201 to 1-202</div><div class="policy-name">University presidents</div><div class="policy-desc">Powers, duties, and accountability of university presidents to the Board. Presidential authority flows from the Board — presidents act as the Board's agents on campus.</div></div>
+      </div>
+    </div>
+
+    <div class="chapter">
+      <div class="ch-header" onclick="toggle(this)">
+        <span class="ch-num">Ch. II</span><span class="ch-title">Academic policies</span><span class="ch-arrow">▼</span>
+      </div>
+      <div class="ch-body">
+        <div class="policy-item"><div class="policy-num">2-105</div><div class="policy-name">Admission requirements</div><div class="policy-desc">Minimum high school core competencies — requires 14 credits from 16 listed areas. The 2 unselected credits cannot be from the same subject area.</div><span class="tag tag-student">Student</span></div>
+        <div class="divider"></div>
+        <div class="policy-item"><div class="policy-num">2-201 to 2-226</div><div class="policy-name">Curricula &amp; degrees</div><div class="policy-desc">Board approval required for new degree programs. Covers undergraduate, graduate, and professional degrees, academic calendars, and transfer credit.</div></div>
+        <div class="divider"></div>
+        <div class="policy-item"><div class="policy-num">2-301 to 2-308</div><div class="policy-name">Research &amp; academic freedom</div><div class="policy-desc">Protects faculty academic freedom in teaching and research. Sets parameters for sponsored research and university-industry partnerships.</div></div>
+      </div>
+    </div>
+
+    <div class="chapter">
+      <div class="ch-header" onclick="toggle(this)">
+        <span class="ch-num">Ch. III</span><span class="ch-title">Budgets &amp; finance</span><span class="ch-arrow">▼</span>
+      </div>
+      <div class="ch-body">
+        <div class="policy-item"><div class="policy-num">3-101 to 3-120</div><div class="policy-name">Budget process</div><div class="policy-desc">Universities submit annual operating budgets to ABOR for approval. Board sets overall fiscal parameters; universities manage within approved budgets. ABOR has financial oversight authority including the ability to impose enhanced oversight on any institution.</div><span class="tag tag-fin">Finance</span></div>
+        <div class="divider"></div>
+        <div class="policy-item"><div class="policy-num">3-801 to 3-812</div><div class="policy-name">Audit &amp; compliance</div><div class="policy-desc">Universities must submit to ABOR Audit Committee oversight. Covers internal audit functions, external audits, and whistleblower protections.</div></div>
+      </div>
+    </div>
+
+    <div class="chapter">
+      <div class="ch-header" onclick="toggle(this)">
+        <span class="ch-num">Ch. IV</span><span class="ch-title">Tuition &amp; fees</span><span class="ch-arrow">▼</span>
+      </div>
+      <div class="ch-body">
+        <div class="policy-item"><div class="policy-num">4-101</div><div class="policy-name">Tuition &amp; fees definitions</div><div class="policy-desc">Distinguishes tuition from mandatory fees from course fees. Critical distinction: only ABOR can set tuition; universities have limited authority over certain fees.</div><span class="tag tag-fin">Finance</span><span class="tag tag-student">Student</span></div>
+        <div class="divider"></div>
+        <div class="policy-item"><div class="policy-num">4-201 to 4-210</div><div class="policy-name">Multi-year tuition structure</div><div class="policy-desc">ABOR sets tuition for up to 5-year periods to give resident students cost predictability. Growth rates must balance competitiveness, enrollment, operations, and inflation.</div></div>
+      </div>
+    </div>
+
+    <div class="chapter">
+      <div class="ch-header" onclick="toggle(this)">
+        <span class="ch-num">Ch. V</span><span class="ch-title">Campus &amp; student affairs</span><span class="ch-arrow">▼</span>
+      </div>
+      <div class="ch-body">
+        <div class="policy-item"><div class="policy-num">5-301 to 5-310</div><div class="policy-name">Student rights &amp; conduct</div><div class="policy-desc">The Student Code of Conduct (5-308) is the cornerstone — defines prohibited conduct, due process rights, and disciplinary procedures for all three universities. Adopted 1990, last revised 2020.</div><span class="tag tag-student">Student</span><span class="tag tag-key">Key policy</span></div>
+        <div class="divider"></div>
+        <div class="policy-item"><div class="policy-num">5-401</div><div class="policy-name">Free expression policy</div><div class="policy-desc">Students, faculty, and staff may engage in expressive activities as long as they don't materially disrupt university operations or infringe on the rights of others. All 3 universities hold FIRE "green light" ratings.</div></div>
+        <div class="divider"></div>
+        <div class="policy-item"><div class="policy-num">5-501 to 5-510</div><div class="policy-name">Student financial aid</div><div class="policy-desc">ABOR policy on need-based and merit-based aid. Universities maintain need-based aid for AZ residents; merit aid for non-residents is subject to recalibration.</div></div>
+      </div>
+    </div>
+
+    <div class="chapter">
+      <div class="ch-header" onclick="toggle(this)">
+        <span class="ch-num">Ch. VI</span><span class="ch-title">Personnel policies</span><span class="ch-arrow">▼</span>
+      </div>
+      <div class="ch-body">
+        <div class="policy-item"><div class="policy-num">6-201</div><div class="policy-name">Conditions of faculty service</div><div class="policy-desc">The single most-referenced ABOR policy. Covers tenure, academic freedom, appointment types, dismissal for cause, non-renewal procedures, and hearing rights. Changes take effect at the start of the next appointment period.</div><span class="tag tag-hr">HR</span><span class="tag tag-key">Key policy</span></div>
+        <div class="divider"></div>
+        <div class="policy-item"><div class="policy-num">6-302</div><div class="policy-name">Conditions of service — academic professionals</div><div class="policy-desc">Covers non-faculty academic employees (advisors, researchers, etc.). Continuing vs. probationary appointments, just cause dismissal standards, and hearing procedures.</div><span class="tag tag-hr">HR</span></div>
+        <div class="divider"></div>
+        <div class="policy-item"><div class="policy-num">6-810</div><div class="policy-name">Classified staff policies</div><div class="policy-desc">Covers classified (non-exempt) employees. Different from faculty and academic professionals — governed by merit system principles.</div><span class="tag tag-hr">HR</span></div>
+        <div class="divider"></div>
+        <div class="policy-item"><div class="policy-num">6-901</div><div class="policy-name">Salary increases</div><div class="policy-desc">ABOR allocates salary increase funds to universities across 4 employee groups (faculty, academic professional, administrative, classified), split between adjustment funds and performance funds. Each university proposes the split ratio.</div><span class="tag tag-hr">HR</span><span class="tag tag-fin">Finance</span></div>
+        <div class="divider"></div>
+        <div class="policy-item"><div class="policy-num">6-908</div><div class="policy-name">Intellectual property policy</div><div class="policy-desc">Governs ownership of inventions, patents, and copyrightable works created by faculty and staff. Generally, IP created using university resources belongs to the university.</div><span class="tag tag-key">Key policy</span></div>
+      </div>
+    </div>
+
+    <div class="chapter">
+      <div class="ch-header" onclick="toggle(this)">
+        <span class="ch-num">Ch. VII</span><span class="ch-title">Capital development</span><span class="ch-arrow">▼</span>
+      </div>
+      <div class="ch-body">
+        <div class="policy-item"><div class="policy-num">7-101 to 7-120</div><div class="policy-name">Capital planning &amp; approval</div><div class="policy-desc">All major capital projects require ABOR Finance/Capital Committee review and Board approval. Projects flow through: Planning → Project Approval → Construction → Closeout.</div></div>
+        <div class="divider"></div>
+        <div class="policy-item"><div class="policy-num">7-201</div><div class="policy-name">University master plans</div><div class="policy-desc">Each university must maintain an ABOR-approved master plan. Capital projects must conform to it. New projects are refined as they proceed through the approval process.</div></div>
+      </div>
+    </div>
+
+    <div class="chapter">
+      <div class="ch-header" onclick="toggle(this)">
+        <span class="ch-num">Ch. VIII</span><span class="ch-title">Health sciences</span><span class="ch-arrow">▼</span>
+      </div>
+      <div class="ch-body">
+        <div class="policy-item"><div class="policy-num">8-301 to 8-307</div><div class="policy-name">Hospital &amp; clinical policies</div><div class="policy-desc">Covers university-affiliated hospitals and health programs. Includes abortion policy (8-303), patients' rights (8-304), professional standards review (8-305), and utilization review (8-307).</div></div>
+      </div>
+    </div>
+
+    <div class="chapter">
+      <div class="ch-header" onclick="toggle(this)">
+        <span class="ch-num">Ch. IX</span><span class="ch-title">Technology &amp; research enterprise</span><span class="ch-arrow">▼</span>
+      </div>
+      <div class="ch-body">
+        <div class="policy-item"><div class="policy-num">9-106</div><div class="policy-name">Quarterly reports</div><div class="policy-desc">Universities must submit quarterly financial and operational reports to ABOR.</div></div>
+        <div class="divider"></div>
+        <div class="policy-item"><div class="policy-num">9-109</div><div class="policy-name">Regents IT Innovation Fund</div><div class="policy-desc">A Board-managed fund to support cross-university technology initiatives.</div></div>
+        <div class="divider"></div>
+        <div class="policy-item"><div class="policy-num">9-301 to 9-305</div><div class="policy-name">AZUN (Arizona University Network)</div><div class="policy-desc">Governs shared planning, management, budgeting, strategy, and annual reporting across the three-university system — the inter-university coordination framework.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KEY POLICIES -->
+  <div id="panel-key" class="panel">
+    <div class="tip-box"><strong>Focus area:</strong> These are the policies most likely to come up in practice — know these cold.</div>
+
+    <div class="chapter">
+      <div class="ch-header" onclick="toggle(this)">
+        <span class="ch-num" style="background:#faeeda;color:#633806">★</span>
+        <span class="ch-title">6-201 — Conditions of faculty service</span>
+        <span class="ch-arrow">▼</span>
+      </div>
+      <div class="ch-body open">
+        <div class="policy-item"><div class="policy-name">Tenure</div><div class="policy-desc">Tenure provides protection against dismissal except for just cause. Tenure-track faculty get written notice of non-renewal and a statement of reasons upon request.</div></div>
+        <div class="divider"></div>
+        <div class="policy-item"><div class="policy-name">Just cause for dismissal</div><div class="policy-desc">Includes: demonstrated incompetence, dishonesty, willful/malicious/serious disregard of ABOR or university policies. Non-tenured faculty can be dismissed during a period only after just cause finding.</div></div>
+        <div class="divider"></div>
+        <div class="policy-item"><div class="policy-name">Hearing rights</div><div class="policy-desc">Faculty facing dismissal are entitled to a formal hearing. It is NOT a judicial proceeding — formal rules of evidence don't apply. Includes right to confront/cross-examine witnesses, right to know panel members, and right to appeal to Superior Court within 35 days under the Administrative Review Act (A.R.S. §12-901).</div></div>
+        <div class="divider"></div>
+        <div class="policy-item"><div class="policy-name">Academic freedom</div><div class="policy-desc">Explicitly protected by 6-201. Faculty retain freedom in teaching and research; universities cannot discipline faculty solely for the content of protected academic expression.</div></div>
+      </div>
+    </div>
+
+    <div class="chapter">
+      <div class="ch-header" onclick="toggle(this)">
+        <span class="ch-num" style="background:#faeeda;color:#633806">★</span>
+        <span class="ch-title">5-308 — Student Code of Conduct</span>
+        <span class="ch-arrow">▼</span>
+      </div>
+      <div class="ch-body">
+        <div class="policy-item"><div class="policy-name">Scope</div><div class="policy-desc">Applies to all students at ASU, NAU, and U of A. Governs conduct on-campus, at university-affiliated events, and in some cases off-campus.</div></div>
+        <div class="divider"></div>
+        <div class="policy-item"><div class="policy-name">Due process</div><div class="policy-desc">Students are entitled to notice of charges, opportunity to be heard, and appeal rights. The policy aligns with Clery Act and Title IX federal requirements.</div></div>
+      </div>
+    </div>
+
+    <div class="chapter">
+      <div class="ch-header" onclick="toggle(this)">
+        <span class="ch-num" style="background:#faeeda;color:#633806">★</span>
+        <span class="ch-title">6-908 — Intellectual property</span>
+        <span class="ch-arrow">▼</span>
+      </div>
+      <div class="ch-body">
+        <div class="policy-item"><div class="policy-name">University ownership</div><div class="policy-desc">IP created using university resources, facilities, or within the scope of employment belongs to the university. This includes patents, software, and some copyrighted works.</div></div>
+        <div class="divider"></div>
+        <div class="policy-item"><div class="policy-name">Revenue sharing</div><div class="policy-desc">Net licensing revenues are shared with inventors/creators. The split percentages are defined in this policy and are non-negotiable individually — they apply uniformly.</div></div>
+      </div>
+    </div>
+
+    <div class="chapter">
+      <div class="ch-header" onclick="toggle(this)">
+        <span class="ch-num" style="background:#faeeda;color:#633806">★</span>
+        <span class="ch-title">4-101 — Tuition &amp; fee definitions</span>
+        <span class="ch-arrow">▼</span>
+      </div>
+      <div class="ch-body">
+        <div class="policy-item"><div class="policy-name">Critical distinction</div><div class="policy-desc">Tuition = ABOR authority only. Mandatory fees = Board-approved. Course/program fees = more flexibility for universities but must be approved. Getting these categories wrong in a proposal is a common mistake.</div></div>
+        <div class="divider"></div>
+        <div class="policy-item"><div class="policy-name">Multi-year tuition</div><div class="policy-desc">ABOR now sets tuition on a multi-year basis (up to 5 years) for resident students. This limits annual volatility and is a major shift from year-by-year setting.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXPERT TIPS -->
+  <div id="panel-tips" class="panel">
+    <div class="tip-box"><strong>Expert tip 1:</strong> The policy number prefix tells you everything. Chapter VI (6-xxx) = personnel. Always check whether a situation involves a faculty member (6-201), academic professional (6-302), or classified staff (6-810) — different rules apply to each.</div>
+    <div class="tip-box"><strong>Expert tip 2:</strong> ABOR policy supersedes university policy. If a university's internal policy contradicts ABOR, ABOR wins — always. When advising on a conflict, start at ABOR then layer university policy on top.</div>
+    <div class="tip-box"><strong>Expert tip 3:</strong> Two-reading rule. Any policy change goes through two Board meeting readings. This is why revision histories are essential — if a revision was only read once it's not yet in force.</div>
+    <div class="tip-box"><strong>Expert tip 4:</strong> The web copy is authoritative. Per ABOR, the online policy manual (azregents.edu) is the most current source. Printed or cached PDFs may be outdated — always check the live version before citing.</div>
+    <div class="tip-box"><strong>Expert tip 5:</strong> Hearing procedures ≠ court. Under 6-201 and 6-302, disciplinary hearings are explicitly not judicial proceedings. Formal rules of evidence don't apply. This trips people up constantly.</div>
+    <div class="tip-box"><strong>Expert tip 6:</strong> 35-day appeal window. After a president's decision in a faculty hearing, the appeal to Superior Court must be filed within 35 days under A.R.S. §12-901. Missing this is fatal to the appeal.</div>
+    <div class="tip-box"><strong>Expert tip 7:</strong> Financial oversight is a moving target. Post-UA financial crisis (2023–24), ABOR enhanced its financial oversight policies significantly. Expect policies in Chapters III and IX to be more detailed and actively enforced than older versions suggest.</div>
+  </div>
+
+  <!-- QUIZ -->
+  <div id="panel-quiz" class="panel">
+    <div id="quiz-area"></div>
+  </div>
+
+</div>
+<script>
+function showPanel(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'quiz') initQuiz();
+}
+function toggle(header) {
+  const body = header.nextElementSibling;
+  const arrow = header.querySelector('.ch-arrow');
+  body.classList.toggle('open');
+  arrow.style.transform = body.classList.contains('open') ? 'rotate(180deg)' : '';
+}
+const questions = [
+  { q: "ABOR was originally adopted as a policy manual in which year?", opts: ["1945", "1983", "1990", "1885"], correct: 1, feedback: "The ABOR Policy Manual was initially adopted on March 12, 1983 — though the Board itself dates to 1885 and was unified under one board in 1945." },
+  { q: "Which ABOR policy covers conditions of faculty service, including tenure and dismissal?", opts: ["5-308", "6-201", "6-302", "4-101"], correct: 1, feedback: "Policy 6-201 is the primary faculty employment policy covering tenure, academic freedom, appointment types, dismissal for cause, and hearing rights." },
+  { q: "How many readings does a proposed policy change require before adoption by the Board?", opts: ["One reading", "Two readings", "Three readings", "No readings — staff can adopt"], correct: 1, feedback: "All policy changes require two readings at Board meetings. This is why revision histories always note 'approved by the Board on second reading.'" },
+  { q: "Which of the following can only be set by ABOR itself — not the individual universities?", opts: ["Course fees", "Program fees", "Tuition", "Parking fees"], correct: 2, feedback: "Tuition-setting authority belongs exclusively to ABOR. Universities have more flexibility on course/program fees, but tuition requires full Board action." },
+  { q: "In a faculty dismissal hearing under Policy 6-201, which statement is true?", opts: ["Formal rules of evidence apply", "It must be conducted as a judicial proceeding", "The faculty member can cross-examine adverse witnesses", "The hearing is confidential and no appeal is possible"], correct: 2, feedback: "The policy explicitly states hearings are NOT judicial proceedings and formal evidence rules don't apply. However, faculty do have the right to confront and cross-examine adverse witnesses." },
+  { q: "After a president's decision in a faculty hearing, how many days does the faculty member have to appeal to Superior Court?", opts: ["30 days", "35 days", "60 days", "90 days"], correct: 1, feedback: "Under A.R.S. §12-901 (Administrative Review Act), the appeal must be filed within 35 days of the decision. This is a hard deadline — missing it is fatal to the appeal." },
+  { q: "The Student Code of Conduct (5-308) applies to which universities?", opts: ["ASU only", "ASU and U of A only", "All three: ASU, NAU, and U of A", "Each university has its own separate code"], correct: 2, feedback: "ABOR Policy 5-308 is a system-wide policy that applies to all students at all three universities — ASU, NAU, and the University of Arizona." },
+];
+let cur = 0, score = 0, answered = false;
+function initQuiz() { cur = 0; score = 0; answered = false; renderQ(); }
+function renderQ() {
+  const area = document.getElementById('quiz-area');
+  if (cur >= questions.length) {
+    const pct = Math.round(score / questions.length * 100);
+    let msg = pct >= 80 ? 'Excellent! You know your ABOR policy.' : pct >= 60 ? 'Good foundation — review the key policies section.' : 'Keep studying — revisit the Policy Chapters tab.';
+    area.innerHTML = '<div class="score-box"><div class="score-big">' + score + '/' + questions.length + '</div><div class="score-label">' + pct + '% correct</div><p style="margin-top:16px;font-size:14px;color:#666">' + msg + '</p><button class="action-btn" style="margin-top:16px;max-width:220px" onclick="initQuiz()">Restart quiz</button></div>';
+    return;
+  }
+  const q = questions[cur];
+  const dots = questions.map((_, i) => '<div class="prog-dot ' + (i < cur ? 'done' : i === cur ? 'cur' : '') + '"></div>').join('');
+  area.innerHTML = '<div class="progress">' + dots + '</div><div class="quiz-q">' + q.q + '</div>' +
+    q.opts.map((o, i) => '<button class="quiz-opt" id="opt' + i + '" onclick="answer(' + i + ')">' + o + '</button>').join('') +
+    '<div class="quiz-feedback" id="feedback"></div>' +
+    '<button class="next-btn" id="nxt" onclick="nextQ()">' + (cur < questions.length - 1 ? 'Next question →' : 'See results →') + '</button>';
+  answered = false;
+}
+function answer(i) {
+  if (answered) return;
+  answered = true;
+  const q = questions[cur];
+  if (i === q.correct) { score++; document.getElementById('opt' + i).classList.add('correct'); }
+  else { document.getElementById('opt' + i).classList.add('wrong'); document.getElementById('opt' + q.correct).classList.add('correct'); }
+  document.getElementById('feedback').style.display = 'block';
+  document.getElementById('feedback').textContent = q.feedback;
+  document.getElementById('nxt').style.display = 'inline-block';
+}
+function nextQ() { cur++; renderQ(); }
+initQuiz();
+</script>
+</body>
+</html>
