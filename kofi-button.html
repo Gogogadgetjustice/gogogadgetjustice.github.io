@@ -1,0 +1,74 @@
+<!-- Ko-fi Button Include
+Add this to the <head> of any HTML file to include a small Ko-fi donation button.
+Replace 'YOUR_USERNAME' with your actual Ko-fi username.
+-->
+
+<style>
+.kofi-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+}
+
+.kofi-button a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-decoration: none;
+    padding: 8px 14px;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    font-family: inherit;
+}
+
+.kofi-button a:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
+}
+
+.kofi-button a:active {
+    transform: translateY(0);
+}
+
+.kofi-icon {
+    width: 16px;
+    height: 16px;
+    display: inline-block;
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+    .kofi-button {
+        bottom: 15px;
+        right: 15px;
+    }
+    
+    .kofi-button a {
+        padding: 6px 10px;
+        font-size: 0.75rem;
+    }
+    
+    .kofi-icon {
+        width: 14px;
+        height: 14px;
+    }
+}
+</style>
+
+<div class="kofi-button">
+    <a href="https://ko-fi.com/gogogadgetjustice" target="_blank" rel="noopener noreferrer" title="Support on Ko-fi">
+        <svg class="kofi-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M23.881 8.948c-.773-1.338-2.822-1.554-4.14-.29L16.42 14.486a7.11 7.11 0 0 1-7.214-7.02 7.118 7.118 0 1 1 5.713 11.231-.41-.27-.782-.51-1.197-.708a4.5 4.5 0 1 0-3.648 3.606c.326.122.638.228.926.322a7.11 7.11 0 0 1-2.511-13.579c3.914-3.552 10.236-3.696 14.3.213 3.667 3.394 3.據 8.984.697 12.642-.527.632-1.325 1.663-2.345.779-.656-.528-.364-1.408.27-2.457l3.951-6.848c.573-.996.237-2.232-.759-2.769-.994-.555-2.368-.226-2.985.648l-5.348 9.31c-.693 1.273-2.469 1.734-3.741 1.03-1.272-.704-1.688-2.467-.992-3.74l6.305-10.807C10.762 1.082 12.846.899 14.510 2.176c1.335 1.001 1.892 2.726 1.402 4.153.48-.223.91-.509 1.287-.857 1.344-1.257 3.222-1.275 4.613.128z"/>
+        </svg>
+        Support us
+    </a>
+</div>
