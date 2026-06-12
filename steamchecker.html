@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Steam Library Spec Checker</title>
+<style>
+  :root{
+    --bg:#0e1621; --panel:#16212e; --panel2:#1b2838; --accent:#66c0f4;
+    --good:#7fd97f; --mid:#f4d166; --bad:#f47f7f; --text:#c7d5e0; --muted:#8a99a6;
+    --border:#2a3f5a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:"Segoe UI",Arial,sans-serif; background:var(--bg); color:var(--text);
+    padding:24px;
+  }
+  h1{color:#fff; font-size:1.6rem; margin-bottom:4px;}
+  .sub{color:var(--muted); margin-bottom:24px; font-size:.9rem;}
+  .card{
+    background:var(--panel); border:1px solid var(--border); border-radius:8px;
+    padding:18px 20px; margin-bottom:18px;
+  }
+  .card h2{margin:0 0 12px; font-size:1.05rem; color:var(--accent);}
+  label{display:block; font-size:.85rem; margin-bottom:6px; color:var(--muted);}
+  input[type=text], input[type=number]{
+    width:100%; padding:8px 10px; border-radius:4px; border:1px solid var(--border);
+    background:var(--panel2); color:var(--text); font-size:.9rem;
+  }
+  .row{display:flex; gap:12px; flex-wrap:wrap;}
+  .row > div{flex:1; min-width:140px;}
+  button{
+    background:var(--accent); color:#0e1621; border:none; padding:9px 16px;
+    border-radius:4px; font-weight:600; cursor:pointer; font-size:.9rem; margin-top:10px;
+  }
+  button.secondary{background:var(--panel2); color:var(--text); border:1px solid var(--border);}
+  button:hover{opacity:.9;}
+  .status{font-size:.85rem; color:var(--muted); margin-top:8px;}
+  textarea{
+    width:100%; min-height:90px; background:var(--panel2); color:var(--text);
+    border:1px solid var(--border); border-radius:4px; padding:8px; font-family:monospace;
+    font-size:.8rem;
+  }
+  table{width:100%; border-collapse:collapse; margin-top:10px; font-size:.85rem;}
+  th,td{padding:8px 10px; border-bottom:1px solid var(--border); text-align:left;}
+  th{color:var(--muted); font-weight:600; cursor:pointer;}
+  .verdict{font-weight:700; padding:3px 8px; border-radius:4px; font-size:.78rem; display:inline-block;}
+  .heckyeah{background:rgba(127,217,127,.18); color:var(--good);}
+  .yes{background:rgba(244,209,102,.18); color:var(--mid);}
+  .no{background:rgba(244,127,127,.18); color:var(--bad);}
+  .unknown{background:rgba(138,153,166,.18); color:var(--muted);}
+  .small{font-size:.75rem; color:var(--muted);}
+  a{color:var(--accent);}
+  .pill{display:inline-block; background:var(--panel2); border:1px solid var(--border); border-radius:4px; padding:2px 8px; font-size:.75rem; margin:2px;}
+  .flex-between{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;}
+  .filterbar{margin-bottom:10px; display:flex; gap:8px; flex-wrap:wrap;}
+  .filterbar button{margin-top:0;}
+  .filterbar button.active{outline:2px solid var(--accent);}
+  progress{width:100%; height:6px;}
+</style>
+</head>
+<body>
+
+<h1>Steam Library Spec Checker</h1>
+<p class="sub">Pull your Steam library, save it as JSON, compare against your system specs, and export a run-it report.</p>
+
+<!-- STEP 1: STEAM PROFILE -->
+<div class="card">
+  <h2>1. Load your Steam library</h2>
+  <p class="small">
+    Steam's API blocks direct browser requests (CORS), so this uses a public CORS proxy
+    (<code>corsproxy.io</code>) to reach <code>steamcommunity.com</code>. Your profile's game list must be
+    set to <strong>public</strong> (Steam &gt; Edit Profile &gt; Privacy Settings &gt; Game details: Public).
+  </p>
+  <div class="row">
+    <div>
+      <label for="steamid">SteamID64 or vanity profile name</label>
+      <input type="text" id="steamid" placeholder="e.g. 76561198000000000 or your custom URL name">
+    </div>
+  </div>
+  <button onclick="fetchLibrary()">Fetch library</button>
+  <button class="secondary" onclick="document.getElementById('manualImport').click()">Import library JSON</button>
+  <input type="file" id="manualImport" accept=".json" style="display:none" onchange="importLibrary(event)">
+  <div class="status" id="libStatus"></div>
+</div>
+
+<!-- STEP 2: SAVE AS JSON -->
+<div class="card" id="libraryCard" style="display:none">
+  <h2>2. Your library</h2>
+  <div class="flex-between">
+    <span id="libCount" class="small"></span>
+    <button onclick="downloadJSON(library, 'steam_library.json')">Download library JSON</button>
+  </div>
+</div>
+
+<!-- STEP 3: SYSTEM SPECS -->
+<div class="card">
+  <h2>3. Your system specs</h2>
+  <p class="small">Browsers can't read full hardware info, so auto-detect fills in what it can — fill in / correct the rest yourself.</p>
+  <button class="secondary" onclick="autoDetect()">Auto-detect what's possible</button>
+  <div class="row" style="margin-top:12px">
+    <div>
+      <label for="os">Operating system</label>
+      <input type="text" id="os" placeholder="e.g. Windows 11 64-bit">
+    </div>
+    <div>
+      <label for="cpu">CPU model</label>
+      <input type="text" id="cpu" placeholder="e.g. Intel Core i7-12700K">
+    </div>
+    <div>
+      <label for="gpu">GPU model</label>
+      <input type="text" id="gpu" placeholder="e.g. NVIDIA RTX 3070">
+    </div>
+  </div>
+  <div class="row" style="margin-top:12px">
+    <div>
+      <label for="ram">RAM (GB)</label>
+      <input type="number" id="ram" placeholder="e.g. 32">
+    </div>
+    <div>
+      <label for="vram">VRAM (GB)</label>
+      <input type="number" id="vram" placeholder="e.g. 8">
+    </div>
+    <div>
+      <label for="storage">Free storage (GB, optional)</label>
+      <input type="number" id="storage" placeholder="e.g. 500">
+    </div>
+  </div>
+  <button onclick="saveSpecs()">Save specs</button>
+  <div class="status" id="specStatus"></div>
+</div>
+
+<!-- STEP 4: COMPARE -->
+<div class="card">
+  <h2>4. Check what you can run</h2>
+  <p class="small">
+    Steam doesn't expose machine-readable system requirements via API, so for each game this pulls the
+    "Minimum"/"Recommended" requirements text from its store page (via the same CORS proxy) and runs a
+    best-effort comparison against your specs (CPU/GPU name matching + RAM/VRAM numbers). Always treat
+    results as a rough guide — verify anything borderline on the store page itself.
+  </p>
+  <button onclick="checkAll()">Check my whole library</button>
+  <button class="secondary" onclick="stopCheck=true">Stop</button>
+  <progress id="prog" value="0" max="100" style="display:none"></progress>
+  <div class="status" id="checkStatus"></div>
+</div>
+
+<!-- STEP 5: RESULTS -->
+<div class="card" id="resultsCard" style="display:none">
+  <h2>5. Results</h2>
+  <div class="filterbar">
+    <button onclick="setFilter('all')" id="f-all" class="active">All</button>
+    <button onclick="setFilter('heckyeah')" id="f-heckyeah">Heck Yeah ✅</button>
+    <button onclick="setFilter('yes')" id="f-yes">Meets Minimum ⚠️</button>
+    <button onclick="setFilter('no')" id="f-no">Can't Run ❌</button>
+    <button onclick="setFilter('unknown')" id="f-unknown">Unknown</button>
+  </div>
+  <div class="flex-between" style="margin-bottom:8px">
+    <span class="small" id="resultsSummary"></span>
+    <div>
+      <button onclick="exportResults('json')">Export JSON</button>
+      <button class="secondary" onclick="exportResults('csv')">Export CSV</button>
+    </div>
+  </div>
+  <table id="resultsTable">
+    <thead>
+      <tr>
+        <th onclick="sortBy('name')">Game</th>
+        <th onclick="sortBy('verdict')">Verdict</th>
+        <th>Detail</th>
+        <th>Store page</th>
+      </tr>
+    </thead>
+    <tbody id="resultsBody"></tbody>
+  </table>
+</div>
+
+<script>
+let library = [];
+let specs = {};
+let results = [];
+let stopCheck = false;
+let currentFilter = 'all';
+let sortKey = 'name', sortAsc = true;
+
+// ---------- STEP 1: FETCH LIBRARY ----------
+async function resolveSteamId(input) {
+  // If already a 17-digit SteamID64, use directly
+  if (/^\d{17}$/.test(input.trim())) return input.trim();
+  // Otherwise resolve vanity name via XML profile page (public, no API key needed)
+  const proxy = 'https://corsproxy.io/?url=';
+  const url = `https://steamcommunity.com/id/${encodeURIComponent(input.trim())}/?xml=1`;
+  const res = await fetch(proxy + encodeURIComponent(url));
+  const text = await res.text();
+  const match = text.match(/<steamID64>(\d+)<\/steamID64>/);
+  if (match) return match[1];
+  throw new Error('Could not resolve profile name to a SteamID64.');
+}
+
+async function fetchLibrary() {
+  const input = document.getElementById('steamid').value.trim();
+  const statusEl = document.getElementById('libStatus');
+  if (!input) { statusEl.textContent = 'Enter your SteamID64 or vanity name.'; return; }
+  statusEl.textContent = 'Resolving profile...';
+  try {
+    const steamid64 = await resolveSteamId(input);
+    statusEl.textContent = 'Fetching games (this requires your game list to be PUBLIC)...';
+
+    const proxy = 'https://corsproxy.io/?url=';
+    // Public XML endpoint that lists owned games when profile/game-details is public
+    const url = `https://steamcommunity.com/profiles/${steamid64}/games?tab=all&xml=1`;
+    const res = await fetch(proxy + encodeURIComponent(url));
+    const text = await res.text();
+
+    // Parse XML
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(text, 'text/xml');
+    const gameNodes = xml.querySelectorAll('game');
+
+    if (gameNodes.length === 0) {
+      statusEl.innerHTML = `No games found. Make sure your "Game details" privacy is set to <strong>Public</strong>, ` +
+        `or use "Import library JSON" if you exported your list elsewhere.`;
+      return;
+    }
+
+    library = [];
+    gameNodes.forEach(g => {
+      const appid = g.querySelector('appID')?.textContent;
+      const name = g.querySelector('name')?.textContent;
+      const hours = g.querySelector('hoursOnRecord')?.textContent || '0';
+      if (appid && name) {
+        library.push({ appid: parseInt(appid), name: name, hoursOnRecord: parseFloat(hours) });
+      }
+    });
+
+    statusEl.textContent = `Loaded ${library.length} games for SteamID64 ${steamid64}.`;
+    document.getElementById('libraryCard').style.display = 'block';
+    document.getElementById('libCount').textContent = `${library.length} games loaded`;
+  } catch (e) {
+    statusEl.innerHTML = `Error: ${e.message}. The CORS proxy may be rate-limited — try again, ` +
+      `or use "Import library JSON" with a previously downloaded file.`;
+  }
+}
+
+function importLibrary(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      library = Array.isArray(data) ? data : data.games || [];
+      document.getElementById('libStatus').textContent = `Imported ${library.length} games from file.`;
+      document.getElementById('libraryCard').style.display = 'block';
+      document.getElementById('libCount').textContent = `${library.length} games loaded`;
+    } catch (err) {
+      document.getElementById('libStatus').textContent = 'Invalid JSON file.';
+    }
+  };
+  reader.readAsText(file);
+}
+
+function downloadJSON(data, filename) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+
+// ---------- STEP 3: SYSTEM SPECS ----------
+function autoDetect() {
+  // OS guess from userAgent
+  const ua = navigator.userAgent;
+  let os = 'Unknown';
+  if (ua.includes('Windows NT 10')) os = 'Windows 10/11 64-bit';
+  else if (ua.includes('Windows')) os = 'Windows';
+  else if (ua.includes('Mac OS X')) os = 'macOS';
+  else if (ua.includes('Linux')) os = 'Linux';
+  document.getElementById('os').value = os;
+
+  // RAM (Chrome only, approximate, often capped at 8)
+  if (navigator.deviceMemory) {
+    document.getElementById('ram').value = navigator.deviceMemory;
+  }
+
+  // GPU via WebGL renderer string
+  try {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    const dbgInfo = gl.getExtension('WEBGL_debug_renderer_info');
+    if (dbgInfo) {
+      const renderer = gl.getParameter(dbgInfo.UNMASKED_RENDERER_WEBGL);
+      document.getElementById('gpu').value = renderer;
+    }
+  } catch (e) {}
+
+  document.getElementById('specStatus').textContent =
+    'Auto-detected what the browser exposes (often partial/inaccurate). Please review and correct CPU, VRAM, RAM, and storage manually.';
+}
+
+function saveSpecs() {
+  specs = {
+    os: document.getElementById('os').value,
+    cpu: document.getElementById('cpu').value,
+    gpu: document.getElementById('gpu').value,
+    ram: parseFloat(document.getElementById('ram').value) || 0,
+    vram: parseFloat(document.getElementById('vram').value) || 0,
+    storage: parseFloat(document.getElementById('storage').value) || 0,
+  };
+  document.getElementById('specStatus').textContent = 'Specs saved for comparison.';
+}
+
+// ---------- STEP 4: FETCH & PARSE REQUIREMENTS ----------
+async function fetchRequirements(appid) {
+  const proxy = 'https://corsproxy.io/?url=';
+  // Storefront API returns JSON with pc_requirements (HTML strings)
+  const url = `https://store.steampowered.com/api/appdetails?appids=${appid}&cc=us&l=en`;
+  const res = await fetch(proxy + encodeURIComponent(url));
+  const data = await res.json();
+  const entry = data[appid];
+  if (!entry || !entry.success || !entry.data) return null;
+  return entry.data.pc_requirements || null;
+}
+
+function stripHtml(html) {
+  const div = document.createElement('div');
+  div.innerHTML = html || '';
+  return div.textContent || div.innerText || '';
+}
+
+function extractSpec(text, regexes) {
+  for (const re of regexes) {
+    const m = text.match(re);
+    if (m) return m[1].trim();
+  }
+  return null;
+}
+
+function parseRequirementBlock(html) {
+  const text = stripHtml(html);
+  const ramStr = extractSpec(text, [/Memory:\s*([\d.]+)\s*GB/i, /RAM:\s*([\d.]+)\s*GB/i]);
+  const gpu = extractSpec(text, [/Graphics:\s*([^\n]+)/i, /Video Card:\s*([^\n]+)/i]);
+  const cpu = extractSpec(text, [/Processor:\s*([^\n]+)/i, /CPU:\s*([^\n]+)/i]);
+  const vramStr = gpu ? extractSpec(gpu, [/(\d+)\s*GB/i]) : null;
+  const storageStr = extractSpec(text, [/Storage:\s*([\d.]+)\s*GB/i, /Hard Drive:\s*([\d.]+)\s*GB/i]);
+  return {
+    raw: text,
+    ram: ramStr ? parseFloat(ramStr) : null,
+    vram: vramStr ? parseFloat(vramStr) : null,
+    cpu: cpu,
+    gpu: gpu,
+    storage: storageStr ? parseFloat(storageStr) : null,
+  };
+}
+
+// Rough GPU "tier" comparison: extracts model number, compares numerically when same brand
+function gpuMeetsOrExceeds(userGpu, reqGpu) {
+  if (!userGpu || !reqGpu) return null; // unknown
+  const u = userGpu.toLowerCase();
+  const r = reqGpu.toLowerCase();
+  const brands = ['nvidia', 'geforce', 'rtx', 'gtx', 'amd', 'radeon', 'rx', 'intel', 'arc'];
+  const getNum = s => {
+    const m = s.match(/(\d{3,4})/);
+    return m ? parseInt(m[1]) : null;
+  };
+  const sameFamily = (brands.some(b => u.includes(b) && r.includes(b)) ||
+                      (/nvidia|geforce|gtx|rtx/.test(u) && /nvidia|geforce|gtx|rtx/.test(r)) ||
+                      (/amd|radeon|\brx\b/.test(u) && /amd|radeon|\brx\b/.test(r)));
+  const un = getNum(u), rn = getNum(r);
+  if (sameFamily && un && rn) return un >= rn;
+  return null; // can't confidently compare across families
+}
+
+function compareSpecs(req, kind) {
+  if (!req) return { verdict: 'unknown', detail: 'No requirements data available.' };
+  const block = kind === 'min' ? req.minimum : req.recommended;
+  if (!block) return { verdict: 'unknown', detail: `No "${kind === 'min' ? 'minimum' : 'recommended'}" requirements listed.` };
+  const parsed = parseRequirementBlock(block);
+
+  let pass = true;
+  let notes = [];
+
+  if (parsed.ram != null) {
+    if (specs.ram >= parsed.ram) notes.push(`RAM OK (${specs.ram}GB ≥ ${parsed.ram}GB)`);
+    else { pass = false; notes.push(`RAM short (${specs.ram}GB < ${parsed.ram}GB)`); }
+  }
+  if (parsed.vram != null && specs.vram) {
+    if (specs.vram >= parsed.vram) notes.push(`VRAM OK (${specs.vram}GB ≥ ${parsed.vram}GB)`);
+    else { pass = false; notes.push(`VRAM short (${specs.vram}GB < ${parsed.vram}GB)`); }
+  }
+  const gpuCheck = gpuMeetsOrExceeds(specs.gpu, parsed.gpu);
+  if (gpuCheck === false) { pass = false; notes.push(`GPU likely below "${parsed.gpu}"`); }
+  else if (gpuCheck === true) notes.push(`GPU likely meets "${parsed.gpu}"`);
+  else if (parsed.gpu) notes.push(`GPU unverified vs "${parsed.gpu}"`);
+
+  if (parsed.storage != null && specs.storage) {
+    if (specs.storage < parsed.storage) { pass = false; notes.push(`Storage short (${specs.storage}GB < ${parsed.storage}GB)`); }
+  }
+
+  if (notes.length === 0) return { verdict: 'unknown', detail: 'Could not extract comparable values.' };
+  return { verdict: pass ? 'pass' : 'fail', detail: notes.join('; ') };
+}
+
+function classify(minRes, recRes) {
+  if (minRes.verdict === 'unknown' && recRes.verdict === 'unknown') return 'unknown';
+  if (minRes.verdict === 'fail') return 'no';
+  if (recRes.verdict === 'pass') return 'heckyeah';
+  return 'yes'; // meets min but not confirmed recommended
+}
+
+async function checkAll() {
+  if (library.length === 0) { document.getElementById('checkStatus').textContent = 'Load your library first.'; return; }
+  if (!specs.ram) { document.getElementById('checkStatus').textContent = 'Save your system specs first.'; return; }
+
+  stopCheck = false;
+  results = [];
+  const prog = document.getElementById('prog');
+  prog.style.display = 'block';
+  prog.max = library.length;
+  prog.value = 0;
+  document.getElementById('resultsCard').style.display = 'block';
+
+  for (let i = 0; i < library.length; i++) {
+    if (stopCheck) break;
+    const game = library[i];
+    document.getElementById('checkStatus').textContent = `Checking ${i + 1}/${library.length}: ${game.name}...`;
+    try {
+      const req = await fetchRequirements(game.appid);
+      const minRes = compareSpecs(req, 'min');
+      const recRes = compareSpecs(req, 'rec');
+      const verdict = classify(minRes, recRes);
+      results.push({
+        appid: game.appid,
+        name: game.name,
+        verdict,
+        minDetail: minRes.detail,
+        recDetail: recRes.detail,
+        storeUrl: `https://store.steampowered.com/app/${game.appid}`,
+      });
+    } catch (e) {
+      results.push({
+        appid: game.appid, name: game.name, verdict: 'unknown',
+        minDetail: 'Error fetching requirements', recDetail: '',
+        storeUrl: `https://store.steampowered.com/app/${game.appid}`,
+      });
+    }
+    prog.value = i + 1;
+    renderResults();
+    // be gentle with the proxy/rate limits
+    await new Promise(r => setTimeout(r, 350));
+  }
+  document.getElementById('checkStatus').textContent = stopCheck
+    ? `Stopped. Checked ${results.length}/${library.length} games.`
+    : `Done. Checked ${results.length} games.`;
+}
+
+// ---------- RESULTS UI ----------
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.filterbar button').forEach(b => b.classList.remove('active'));
+  document.getElementById('f-' + f).classList.add('active');
+  renderResults();
+}
+
+function sortBy(key) {
+  if (sortKey === key) sortAsc = !sortAsc; else { sortKey = key; sortAsc = true; }
+  renderResults();
+}
+
+const verdictLabel = {
+  heckyeah: { text: 'Heck Yeah ✅', cls: 'heckyeah' },
+  yes: { text: 'Meets Minimum ⚠️', cls: 'yes' },
+  no: { text: "Can't Run ❌", cls: 'no' },
+  unknown: { text: 'Unknown', cls: 'unknown' },
+};
+
+function renderResults() {
+  const body = document.getElementById('resultsBody');
+  let rows = results.slice();
+  if (currentFilter !== 'all') rows = rows.filter(r => r.verdict === currentFilter);
+
+  rows.sort((a, b) => {
+    let av = a[sortKey], bv = b[sortKey];
+    if (typeof av === 'string') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
+    if (av < bv) return sortAsc ? -1 : 1;
+    if (av > bv) return sortAsc ? 1 : -1;
+    return 0;
+  });
+
+  body.innerHTML = rows.map(r => {
+    const v = verdictLabel[r.verdict];
+    const detail = r.verdict === 'heckyeah' ? r.recDetail :
+                    r.verdict === 'no' ? r.minDetail :
+                    r.minDetail || r.recDetail;
+    return `<tr>
+      <td>${escapeHtml(r.name)}</td>
+      <td><span class="verdict ${v.cls}">${v.text}</span></td>
+      <td class="small">${escapeHtml(detail || '')}</td>
+      <td><a href="${r.storeUrl}" target="_blank">store page</a></td>
+    </tr>`;
+  }).join('');
+
+  const counts = { heckyeah: 0, yes: 0, no: 0, unknown: 0 };
+  results.forEach(r => counts[r.verdict]++);
+  document.getElementById('resultsSummary').textContent =
+    `Total: ${results.length} | Heck Yeah: ${counts.heckyeah} | Meets Minimum: ${counts.yes} | Can't Run: ${counts.no} | Unknown: ${counts.unknown}`;
+}
+
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ---------- EXPORT ----------
+function exportResults(format) {
+  if (results.length === 0) return;
+  if (format === 'json') {
+    downloadJSON({ specs, results }, 'steam_run_check.json');
+  } else {
+    const header = ['Game', 'AppID', 'Verdict', 'Min Detail', 'Recommended Detail', 'Store URL'];
+    const rows = results.map(r => [
+      r.name, r.appid, verdictLabel[r.verdict].text, r.minDetail, r.recDetail, r.storeUrl
+    ]);
+    const csv = [header, ...rows].map(row =>
+      row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+    ).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'steam_run_check.csv';
+    a.click();
+  }
+}
+</script>
+</body>
+</html>
