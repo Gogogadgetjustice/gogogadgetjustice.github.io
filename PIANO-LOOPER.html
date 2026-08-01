@@ -2,514 +2,545 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WebAudio Modular Rack</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accessible Piano Looper Rack</title>
+    <!-- Tone.js for professional audio, effects, and timing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <style>
         :root {
-            --bg-color: #121212;
-            --panel-color: #1e1e1e;
-            --accent-color: #00ff9d;
-            --text-color: #e0e0e0;
-            --rec-color: #ff4757;
-            --play-color: #2ed573;
+            --bg: #121212;
+            --panel: #1e1e1e;
+            --text: #f0f0f0;
+            --accent: #4da6ff;
+            --rec: #ff4d4d;
+            --play: #4dff88;
+            --border: #333;
         }
 
         body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: 'Courier New', monospace;
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
             margin: 0;
-            padding: 10px;
+            padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            height: 100vh;
-            overflow: hidden;
-            touch-action: manipulation; /* Prevents zoom on double tap */
-        }
-
-        header {
-            text-align: center;
-            border-bottom: 2px solid var(--accent-color);
-            padding-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
             align-items: center;
+            min-height: 100vh;
         }
 
-        button.start-btn {
-            background: var(--accent-color);
-            border: none;
-            padding: 10px 20px;
+        h1 { font-size: 1.5rem; margin-bottom: 10px; text-align: center;}
+        p.sub { color: #aaa; margin-top: 0; font-size: 0.9rem; text-align: center;}
+
+        /* Large, accessible buttons */
+        button {
+            background: var(--panel);
+            color: var(--text);
+            border: 2px solid var(--border);
+            padding: 15px 20px;
+            font-size: 1rem;
             font-weight: bold;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-
-        /* Grid Layout for Modules */
-        .rack-container {
-            display: grid;
-            grid-template-columns: 1fr;
-            grid-template-rows: auto auto auto;
-            gap: 10px;
-            flex-grow: 1;
-            overflow-y: auto;
-        }
-
-        @media (min-width: 768px) {
-            .rack-container {
-                grid-template-columns: 1fr 1fr 1fr;
-                grid-template-rows: 1fr;
-            }
-        }
-
-        .module {
-            background: var(--panel-color);
-            border: 1px solid #333;
             border-radius: 8px;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
-
-        .module-title {
-            color: var(--accent-color);
-            text-transform: uppercase;
-            font-size: 0.9rem;
-            margin-bottom: 15px;
-            border-bottom: 1px solid #333;
-            padding-bottom: 5px;
-        }
-
-        /* LOOPER STYLES */
-        .track {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-            background: #2a2a2a;
-            padding: 5px;
-            border-radius: 4px;
-        }
-        .track-btn {
-            width: 40px;
-            height: 40px;
-            border: none;
-            border-radius: 50%;
-            margin-right: 10px;
-            font-weight: bold;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            min-width: 100px;
+            min-height: 50px;
+            transition: all 0.2s;
         }
-        .btn-rec { background: #333; color: #666; }
-        .btn-rec.active { background: var(--rec-color); color: white; animation: pulse 1s infinite; }
-        .btn-play { background: #333; color: #666; }
-        .btn-play.active { background: var(--play-color); color: black; }
-        
-        .track-info { flex-grow: 1; font-size: 0.8rem; }
-        .level-bar { height: 4px; background: #444; width: 100%; margin-top: 5px; }
-        .level-fill { height: 100%; background: var(--accent-color); width: 0%; transition: width 0.1s; }
+        button:hover, button:focus {
+            outline: 3px solid var(--accent);
+            outline-offset: 2px;
+            background: #2a2a2a;
+        }
+        button:active { transform: scale(0.98); }
 
-        /* SYNTH STYLES */
+        /* State colors for Looper */
+        .btn-rec { border-color: var(--rec); color: var(--rec); }
+        .btn-rec.active { background: var(--rec); color: white; animation: pulse 1s infinite; }
+        .btn-play { border-color: var(--play); color: var(--play); }
+        .btn-play.active { background: var(--play); color: black; }
+
+        @keyframes pulse {
+            0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; }
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 800px;
+            box-sizing: border-box;
+        }
+
+        .panel-title {
+            margin-top: 0;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+            font-size: 1.1rem;
+            color: var(--accent);
+        }
+
+        /* Grid layouts for controls */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        
+        @media (max-width: 600px) {
+            .grid-2, .grid-4 { grid-template-columns: 1fr 1fr; }
+        }
+
+        /* Sliders */
+        label { display: flex; flex-direction: column; font-size: 0.9rem; color: #ccc; gap: 5px;}
+        input[type="range"] {
+            width: 100%;
+            height: 30px; /* Large touch target */
+            background: transparent;
+            accent-color: var(--accent);
+        }
+
+        /* Virtual Piano Keyboard */
         .keyboard {
             display: flex;
-            height: 120px;
-            width: 100%;
             position: relative;
-            margin-top: auto;
+            height: 180px;
+            width: 100%;
+            margin-top: 10px;
+            user-select: none;
         }
         .key {
             flex: 1;
-            background: white;
-            border: 1px solid #ccc;
-            border-radius: 0 0 4px 4px;
-            margin: 0 1px;
-            position: relative;
+            border: 1px solid #000;
+            border-radius: 0 0 6px 6px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 10px;
+            font-size: 0.8rem;
+            color: #555;
+            cursor: pointer;
+            transition: background 0.1s;
         }
+        .key.white { background: #f0f0f0; color: #333; z-index: 1;}
+        .key.white.active { background: #d0e8ff; }
+        
         .key.black {
-            background: black;
-            color: white;
-            height: 60%;
-            width: 6%;
             position: absolute;
+            width: 6%;
+            height: 60%;
+            background: #222;
+            color: #aaa;
             z-index: 2;
             border-radius: 0 0 4px 4px;
+            border: 1px solid #000;
         }
-        .key:active, .key.pressed { background: var(--accent-color); }
-        .key.black:active, .key.black.pressed { background: var(--accent-color); }
+        .key.black.active { background: #444; }
 
-        select {
-            background: #333;
-            color: white;
-            border: 1px solid #555;
-            padding: 5px;
-            width: 100%;
-            margin-bottom: 10px;
+        /* Start Audio Overlay */
+        #start-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 100;
         }
-
-        /* FX STYLES */
-        .knob-container {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 20px;
-        }
-        .knob {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        input[type=range] {
-            transform: rotate(-90deg);
-            width: 80px;
-            margin: 40px 0;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
+        #start-overlay.hidden { display: none; }
+        #start-btn { font-size: 1.5rem; padding: 25px 40px; background: var(--accent); color: black; border: none;}
     </style>
 </head>
 <body>
 
-<header>
-    <div>BASIC PIANO LOOP LITE WEB RACK</div>
-    <button class="start-btn" id="initAudio">START AUDIO ENGINE</button>
-</header>
+    <!-- Mandatory Start Overlay for Browser Audio Policies -->
+    <div id="start-overlay">
+        <h1>WebAudio Modular Rack</h1>
+        <p>Browsers require a click to start audio.</p>
+        <button id="start-btn" aria-label="Start Audio Engine">START AUDIO ENGINE</button>
+    </div>
 
-<div class="rack-container">
-    
-    <!-- MODULE 1: LOOPER -->
-    <div class="module" id="looper-module">
-        <div class="module-title">Loop Station (4-Track)</div>
-        <div id="tracks-container">
-            <!-- Tracks generated by JS -->
-        </div>
-        <div style="margin-top:10px; font-size: 0.7rem; color: #888;">
-            *Tap REC to arm, Tap again to record. Tap PLAY to loop.
+    <h1>Accessible Piano & Looper Rack</h1>
+    <p class="sub">Use your computer keyboard (A-L) or click/tap the keys. Tap REC to record, tap again to stop & loop.</p>
+
+    <!-- INSTRUMENTS -->
+    <div class="panel">
+        <h2 class="panel-title">1. Instruments</h2>
+        <div class="grid-4">
+            <button id="inst-piano" class="active" style="background: var(--accent); color: black;" aria-pressed="true">FM Electric Piano</button>
+            <button id="inst-sine" aria-pressed="false">Sine (Clean)</button>
+            <button id="inst-square" aria-pressed="false">Square (8-Bit)</button>
+            <button id="inst-saw" aria-pressed="false">Sawtooth (Sharp)</button>
         </div>
     </div>
 
-    <!-- MODULE 2: SYNTH -->
-    <div class="module" id="synth-module">
-        <div class="module-title">Virtual Keys & Synth</div>
-        <select id="patch-select">
-            <option value="sine">Pure Sine (Clean)</option>
-            <option value="square">Square (8-Bit)</option>
-            <option value="sawtooth">Sawtooth (Sharp)</option>
-            <option value="triangle">Triangle (Soft)</option>
-        </select>
-        <div class="keyboard" id="keyboard">
-            <!-- Keys generated by JS -->
+    <!-- FX RACK -->
+    <div class="panel">
+        <h2 class="panel-title">2. Global FX & Mix</h2>
+        <div class="grid-2">
+            <label>Reverb Mix
+                <input type="range" id="fx-reverb" min="0" max="1" step="0.01" value="0.3" aria-label="Reverb Mix">
+            </label>
+            <label>Reverb Size (Decay)
+                <input type="range" id="fx-reverb-decay" min="0.1" max="10" step="0.1" value="3" aria-label="Reverb Decay">
+            </label>
+            <label>Delay Mix
+                <input type="range" id="fx-delay" min="0" max="1" step="0.01" value="0.15" aria-label="Delay Mix">
+            </label>
+            <label>Chorus Mix
+                <input type="range" id="fx-chorus" min="0" max="1" step="0.01" value="0.2" aria-label="Chorus Mix">
+            </label>
         </div>
     </div>
 
-    <!-- MODULE 3: FX / MIXER -->
-    <div class="module" id="fx-module">
-        <div class="module-title">Global FX & Mix</div>
-        <div class="knob-container">
-            <div class="knob">
-                <label>Reverb</label>
-                <input type="range" id="reverb-knob" min="0" max="1" step="0.01" value="0.2">
+    <!-- LOOP STATION -->
+    <div class="panel">
+        <h2 class="panel-title">3. Loop Station (4-Track)</h2>
+        <div class="grid-4" id="loop-tracks">
+            <!-- Track 1 -->
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <button class="btn-rec" data-track="0" aria-label="Record Track 1">REC 1</button>
+                <button class="btn-play" data-track="0" aria-label="Play Track 1" disabled>PLAY 1</button>
+                <button data-track="0" data-action="clear" aria-label="Clear Track 1">CLEAR</button>
             </div>
-            <div class="knob">
-                <label>Delay</label>
-                <input type="range" id="delay-knob" min="0" max="0.5" step="0.01" value="0">
+            <!-- Track 2 -->
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <button class="btn-rec" data-track="1" aria-label="Record Track 2">REC 2</button>
+                <button class="btn-play" data-track="1" aria-label="Play Track 2" disabled>PLAY 2</button>
+                <button data-track="1" data-action="clear" aria-label="Clear Track 2">CLEAR</button>
             </div>
-            <div class="knob">
-                <label>Master</label>
-                <input type="range" id="master-knob" min="0" max="1" step="0.01" value="0.8">
+            <!-- Track 3 -->
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <button class="btn-rec" data-track="2" aria-label="Record Track 3">REC 3</button>
+                <button class="btn-play" data-track="2" aria-label="Play Track 3" disabled>PLAY 3</button>
+                <button data-track="2" data-action="clear" aria-label="Clear Track 3">CLEAR</button>
+            </div>
+            <!-- Track 4 -->
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <button class="btn-rec" data-track="3" aria-label="Record Track 4">REC 4</button>
+                <button class="btn-play" data-track="3" aria-label="Play Track 4" disabled>PLAY 4</button>
+                <button data-track="3" data-action="clear" aria-label="Clear Track 4">CLEAR</button>
             </div>
         </div>
-        <div style="margin-top: 20px; text-align: center;">
-            <button id="clear-loops" style="background:#ff4757; border:none; color:white; padding:10px; width:100%;">CLEAR ALL LOOPS</button>
-        </div>
+        <button id="stop-all" style="width: 100%; margin-top: 15px; background: #333;">STOP ALL & CLEAR LOOPS</button>
     </div>
 
-</div>
+    <!-- KEYBOARD -->
+    <div class="panel">
+        <h2 class="panel-title">4. Virtual Keys</h2>
+        <div class="keyboard" id="keyboard" role="application" aria-label="Piano Keyboard"></div>
+    </div>
 
-<script>
-    // --- AUDIO ENGINE CORE ---
-    let audioCtx;
-    let masterGain;
-    let reverbNode;
-    let delayNode;
-    let isAudioStarted = false;
-
-    // Initialize Audio Context (Must be triggered by user gesture)
-    document.getElementById('initAudio').addEventListener('click', async () => {
-        if (isAudioStarted) return;
+    <script>
+        // ==========================================
+        // 1. AUDIO ENGINE & ROUTING
+        // ==========================================
+        let audioStarted = false;
         
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        masterGain = audioCtx.createGain();
+        // Master FX Chain
+        const chorus = new Tone.Chorus({ frequency: 1.5, delayTime: 3.5, wet: 0.2 }).start();
+        const reverb = new Tone.Reverb({ decay: 3, wet: 0.3 });
+        const delay = new Tone.FeedbackDelay({ delayTime: "8n.", feedback: 0.3, wet: 0.15 });
+        const masterGain = new Tone.Gain(0.8);
+
+        // Chain: Chorus -> Reverb -> Delay -> Master -> Speakers
+        chorus.connect(reverb);
+        reverb.connect(delay);
+        delay.connect(masterGain);
+        masterGain.toDestination();
+
+        // Recording Bus (Captures ONLY live playing, not loop playback)
+        const liveBus = new Tone.Gain();
+        const recDest = Tone.getContext().createMediaStreamDestination();
+        liveBus.connect(recDest);
         
-        // Create FX Chain
-        reverbNode = audioCtx.createConvolver();
-        // Simple impulse response for reverb
-        const rate = audioCtx.sampleRate;
-        const length = rate * 2; // 2 seconds
-        const impulse = audioCtx.createBuffer(2, length, rate);
-        const impulseL = impulse.getChannelData(0);
-        const impulseR = impulse.getChannelData(1);
-        for (let i = 0; i < length; i++) {
-            const decay = Math.pow(1 - i / length, 2);
-            impulseL[i] = (Math.random() * 2 - 1) * decay;
-            impulseR[i] = (Math.random() * 2 - 1) * decay;
+        // Live audio also goes to the FX chain
+        liveBus.connect(chorus);
+
+        // ==========================================
+        // 2. INSTRUMENTS
+        // ==========================================
+        // FM Synth configured to sound like a warm Electric Piano (Rhodes/Wurlitzer)
+        const fmPiano = new Tone.FMSynth({
+            harmonicity: 3,
+            modulationIndex: 10,
+            envelope: { attack: 0.001, decay: 1.5, sustain: 0.2, release: 0.5 },
+            modulation: { type: "sine" },
+            modulationEnvelope: { attack: 0.002, decay: 1.0, sustain: 0.5, release: 0.2 }
+        }).connect(liveBus);
+
+        // Basic PolySynth for the other waveforms
+        const basicSynth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "sine" },
+            envelope: { attack: 0.005, decay: 0.3, sustain: 0.4, release: 1.0 }
+        }).connect(liveBus);
+
+        let activeInstrument = fmPiano;
+
+        // ==========================================
+        // 3. LOOP STATION LOGIC
+        // ==========================================
+        const tracks = [
+            { buffer: null, player: null, isRecording: false, isPlaying: false },
+            { buffer: null, player: null, isRecording: false, isPlaying: false },
+            { buffer: null, player: null, isRecording: false, isPlaying: false },
+            { buffer: null, player: null, isRecording: false, isPlaying: false }
+        ];
+        
+        let mediaRecorder = null;
+        let recordingChunks = [];
+        let currentRecordingTrack = -1;
+
+        function startRecording(trackIndex) {
+            // Stop any other recording first
+            if (currentRecordingTrack !== -1) stopRecording();
+
+            currentRecordingTrack = trackIndex;
+            tracks[trackIndex].isRecording = true;
+            recordingChunks = [];
+
+            mediaRecorder = new MediaRecorder(recDest.stream);
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) recordingChunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                const blob = new Blob(recordingChunks, { type: 'audio/webm' });
+                const arrayBuffer = await blob.arrayBuffer();
+                
+                // Decode audio using Tone.js context
+                const audioBuffer = await Tone.getContext().decodeAudioData(arrayBuffer);
+                tracks[trackIndex].buffer = audioBuffer;
+                tracks[trackIndex].isRecording = false;
+                currentRecordingTrack = -1;
+                updateLooperUI();
+            };
+
+            mediaRecorder.start();
+            updateLooperUI();
         }
-        reverbNode.buffer = impulse;
 
-        delayNode = audioCtx.createDelay();
-        delayNode.delayTime.value = 0.3;
-        const delayFeedback = audioCtx.createGain();
-        delayFeedback.gain.value = 0.4;
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+        }
 
-        // Routing: Source -> FX -> Master -> Destination
-        // We will connect individual instruments to 'masterGain' directly, 
-        // and 'masterGain' will split to Dry/Wet FX
+        function playTrack(trackIndex) {
+            if (!tracks[trackIndex].buffer) return;
+
+            // Stop if already playing
+            if (tracks[trackIndex].player) {
+                tracks[trackIndex].player.stop();
+                tracks[trackIndex].player.dispose();
+            }
+
+            // Create player and route to FX chain (NOT liveBus, so it doesn't re-record)
+            const player = new Tone.Player(tracks[trackIndex].buffer).connect(chorus);
+            player.loop = true;
+            player.loopStart = 0;
+            player.start();
+            
+            tracks[trackIndex].player = player;
+            tracks[trackIndex].isPlaying = true;
+            updateLooperUI();
+        }
+
+        function stopTrack(trackIndex) {
+            if (tracks[trackIndex].player) {
+                tracks[trackIndex].player.stop();
+                tracks[trackIndex].player.dispose();
+                tracks[trackIndex].player = null;
+            }
+            tracks[trackIndex].isPlaying = false;
+            updateLooperUI();
+        }
+
+        function clearTrack(trackIndex) {
+            stopTrack(trackIndex);
+            tracks[trackIndex].buffer = null;
+            updateLooperUI();
+        }
+
+        function updateLooperUI() {
+            document.querySelectorAll('#loop-tracks > div').forEach((trackEl, index) => {
+                const recBtn = trackEl.querySelector('.btn-rec');
+                const playBtn = trackEl.querySelector('.btn-play');
+                const track = tracks[index];
+
+                // Reset classes
+                recBtn.classList.remove('active');
+                playBtn.classList.remove('active');
+                playBtn.disabled = true;
+
+                if (track.isRecording) {
+                    recBtn.classList.add('active');
+                    recBtn.innerText = `STOP REC ${index + 1}`;
+                } else if (track.buffer) {
+                    recBtn.innerText = `REC ${index + 1}`;
+                    playBtn.disabled = false;
+                    
+                    if (track.isPlaying) {
+                        playBtn.classList.add('active');
+                        playBtn.innerText = `PAUSE ${index + 1}`;
+                    } else {
+                        playBtn.innerText = `PLAY ${index + 1}`;
+                    }
+                } else {
+                    recBtn.innerText = `REC ${index + 1}`;
+                    playBtn.innerText = `PLAY ${index + 1}`;
+                }
+            });
+        }
+
+        // ==========================================
+        // 4. UI & KEYBOARD MAPPING
+        // ==========================================
         
-        const dryGain = audioCtx.createGain();
-        const wetGain = audioCtx.createGain();
-        
-        masterGain.connect(dryGain);
-        masterGain.connect(reverbNode);
-        reverbNode.connect(wetGain);
-        masterGain.connect(delayNode);
-        delayNode.connect(delayFeedback);
-        delayFeedback.connect(delayNode); // Feedback loop
-        delayNode.connect(wetGain);
-
-        wetGain.connect(audioCtx.destination);
-        dryGain.connect(audioCtx.destination);
-
-        // UI Controls for FX
-        document.getElementById('reverb-knob').addEventListener('input', (e) => {
-            wetGain.gain.value = e.target.value;
-            dryGain.gain.value = 1 - e.target.value;
-        });
-        
-        document.getElementById('delay-knob').addEventListener('input', (e) => {
-            delayFeedback.gain.value = e.target.value * 2; 
+        // Start Audio Engine
+        document.getElementById('start-btn').addEventListener('click', async () => {
+            await Tone.start();
+            document.getElementById('start-overlay').classList.add('hidden');
+            audioStarted = true;
         });
 
-        document.getElementById('master-knob').addEventListener('input', (e) => {
-            masterGain.gain.value = e.target.value;
+        // Instrument Selection
+        const instBtns = {
+            'inst-piano': fmPiano,
+            'inst-sine': basicSynth,
+            'inst-square': basicSynth,
+            'inst-saw': basicSynth
+        };
+
+        Object.keys(instBtns).forEach(id => {
+            document.getElementById(id).addEventListener('click', (e) => {
+                document.querySelectorAll('[id^="inst-"]').forEach(btn => {
+                    btn.style.background = '';
+                    btn.style.color = '';
+                    btn.setAttribute('aria-pressed', 'false');
+                });
+                e.target.style.background = 'var(--accent)';
+                e.target.style.color = 'black';
+                e.target.setAttribute('aria-pressed', 'true');
+
+                if (id === 'inst-piano') {
+                    activeInstrument = fmPiano;
+                } else {
+                    activeInstrument = basicSynth;
+                    const wave = id.split('-')[1];
+                    basicSynth.set({ oscillator: { type: wave } });
+                }
+            });
         });
 
-        document.getElementById('initAudio').style.display = 'none';
-        isAudioStarted = true;
-        initLooper();
-        initSynth();
-    });
+        // FX Sliders
+        document.getElementById('fx-reverb').addEventListener('input', (e) => reverb.wet.value = e.target.value);
+        document.getElementById('fx-reverb-decay').addEventListener('input', (e) => reverb.decay = e.target.value);
+        document.getElementById('fx-delay').addEventListener('input', (e) => delay.wet.value = e.target.value);
+        document.getElementById('fx-chorus').addEventListener('input', (e) => chorus.wet.value = e.target.value);
 
-    // --- SYNTH MODULE ---
-    function initSynth() {
-        const keyboard = document.getElementById('keyboard');
+        // Looper Buttons
+        document.querySelectorAll('#loop-tracks button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!audioStarted) return;
+                const trackIndex = parseInt(btn.dataset.track);
+                const action = btn.dataset.action;
+
+                if (btn.classList.contains('btn-rec')) {
+                    if (tracks[trackIndex].isRecording) stopRecording();
+                    else startRecording(trackIndex);
+                } else if (btn.classList.contains('btn-play')) {
+                    if (tracks[trackIndex].isPlaying) stopTrack(trackIndex);
+                    else playTrack(trackIndex);
+                } else if (action === 'clear') {
+                    clearTrack(trackIndex);
+                }
+            });
+        });
+
+        document.getElementById('stop-all').addEventListener('click', () => {
+            if (currentRecordingTrack !== -1) stopRecording();
+            for (let i = 0; i < 4; i++) clearTrack(i);
+        });
+
+        // Build Virtual Keyboard
+        const keyboardEl = document.getElementById('keyboard');
         const notes = [
-            { note: 'C', freq: 261.63, type: 'white' },
-            { note: 'C#', freq: 277.18, type: 'black', offset: 10 },
-            { note: 'D', freq: 293.66, type: 'white' },
-            { note: 'D#', freq: 311.13, type: 'black', offset: 23 },
-            { note: 'E', freq: 329.63, type: 'white' },
-            { note: 'F', freq: 349.23, type: 'white' },
-            { note: 'F#', freq: 369.99, type: 'black', offset: 48 },
-            { note: 'G', freq: 392.00, type: 'white' },
-            { note: 'G#', freq: 415.30, type: 'black', offset: 61 },
-            { note: 'A', freq: 440.00, type: 'white' },
-            { note: 'A#', freq: 466.16, type: 'black', offset: 74 },
-            { note: 'B', freq: 493.88, type: 'white' },
-            { note: 'C2', freq: 523.25, type: 'white' }
+            { note: 'C4', type: 'white', key: 'a' }, { note: 'C#4', type: 'black', key: 'w' },
+            { note: 'D4', type: 'white', key: 's' }, { note: 'D#4', type: 'black', key: 'e' },
+            { note: 'E4', type: 'white', key: 'd' }, { note: 'F4', type: 'white', key: 'f' },
+            { note: 'F#4', type: 'black', key: 't' }, { note: 'G4', type: 'white', key: 'g' },
+            { note: 'G#4', type: 'black', key: 'y' }, { note: 'A4', type: 'white', key: 'h' },
+            { note: 'A#4', type: 'black', key: 'u' }, { note: 'B4', type: 'white', key: 'j' },
+            { note: 'C5', type: 'white', key: 'k' }, { note: 'C#5', type: 'black', key: 'o' },
+            { note: 'D5', type: 'white', key: 'l' }
         ];
 
-        notes.forEach(n => {
-            const key = document.createElement('div');
-            key.className = `key ${n.type}`;
-            if(n.type === 'black') {
-                key.style.left = n.offset + '%';
-            }
+        let blackKeyOffset = 0;
+        const whiteKeyWidth = 100 / notes.filter(n => n.type === 'white').length;
+
+        notes.forEach((n, i) => {
+            const keyEl = document.createElement('div');
+            keyEl.className = `key ${n.type}`;
+            keyEl.dataset.note = n.note;
+            keyEl.innerHTML = `<span>${n.key.toUpperCase()}</span>`;
             
-            // Touch/Mouse Events
+            if (n.type === 'white') {
+                keyEl.style.flex = '1';
+            } else {
+                // Position black keys
+                keyEl.style.left = `${(blackKeyOffset * whiteKeyWidth) + (whiteKeyWidth * 0.65)}%`;
+                blackKeyOffset++;
+            }
+            if (n.type === 'white') blackKeyOffset++; // Wait, logic fix for black keys positioning
+            // Simplified black key positioning:
+            if(n.type === 'black') {
+                // Find previous white key index
+                let prevWhiteCount = notes.slice(0, i).filter(x => x.type === 'white').length;
+                keyEl.style.left = `${(prevWhiteCount * whiteKeyWidth) - (whiteKeyWidth * 0.15)}%`;
+            }
+
+            // Mouse/Touch events
             const startNote = (e) => {
                 e.preventDefault();
-                if(!isAudioStarted) return;
-                key.classList.add('pressed');
-                playTone(n.freq);
+                if (!audioStarted) return;
+                keyEl.classList.add('active');
+                activeInstrument.triggerAttack(n.note, Tone.now());
             };
-            
             const endNote = (e) => {
                 e.preventDefault();
-                key.classList.remove('pressed');
-                stopTone();
+                keyEl.classList.remove('active');
+                activeInstrument.triggerRelease(n.note, Tone.now());
             };
 
-            key.addEventListener('mousedown', startNote);
-            key.addEventListener('mouseup', endNote);
-            key.addEventListener('touchstart', startNote);
-            key.addEventListener('touchend', endNote);
-            
-            keyboard.appendChild(key);
+            keyEl.addEventListener('mousedown', startNote);
+            keyEl.addEventListener('mouseup', endNote);
+            keyEl.addEventListener('mouseleave', endNote);
+            keyEl.addEventListener('touchstart', startNote, { passive: false });
+            keyEl.addEventListener('touchend', endNote, { passive: false });
+
+            keyboardEl.appendChild(keyEl);
         });
-    }
 
-    let currentOscillator = null;
-    let currentGain = null;
+        // Computer Keyboard Mapping
+        const keyMap = {};
+        notes.forEach(n => keyMap[n.key] = n.note);
+        const pressedKeys = new Set();
 
-    function playTone(freq) {
-        if(currentOscillator) stopTone();
-        
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        
-        osc.type = document.getElementById('patch-select').value;
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        
-        gain.gain.setValueAtTime(0, audioCtx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.05); // Attack
-        
-        osc.connect(gain);
-        gain.connect(masterGain); // Connect to the main mix
-        
-        osc.start();
-        currentOscillator = osc;
-        currentGain = gain;
-    }
-
-    function stopTone() {
-        if(currentGain) {
-            currentGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1); // Release
-            setTimeout(() => {
-                if(currentOscillator) currentOscillator.stop();
-                currentOscillator = null;
-            }, 100);
-        }
-    }
-
-    // --- LOOPER MODULE ---
-    // Simplified 4-track looper logic
-    const tracks = [];
-    const numTracks = 4;
-
-    function initLooper() {
-        const container = document.getElementById('tracks-container');
-        
-        for(let i=0; i<numTracks; i++) {
-            tracks.push({
-                id: i,
-                isRecording: false,
-                isPlaying: false,
-                bufferSource: null,
-                mediaRecorder: null,
-                audioChunks: [],
-                recordedBuffer: null
-            });
-
-            const trackEl = document.createElement('div');
-            trackEl.className = 'track';
-            trackEl.innerHTML = `
-                <button class="track-btn btn-rec" id="rec-${i}">REC</button>
-                <button class="track-btn btn-play" id="play-${i}">PLAY</button>
-                <div class="track-info">
-                    <div>TRACK ${i+1}</div>
-                    <div class="level-bar"><div class="level-fill" id="level-${i}"></div></div>
-                </div>
-            `;
-            container.appendChild(trackEl);
-
-            // Bind Buttons
-            document.getElementById(`rec-${i}`).addEventListener('click', () => toggleRecord(i));
-            document.getElementById(`play-${i}`).addEventListener('click', () => togglePlay(i));
-        }
-    }
-
-    function toggleRecord(trackId) {
-        const track = tracks[trackId];
-        const btn = document.getElementById(`rec-${trackId}`);
-
-        if (track.isRecording) {
-            // Stop Recording
-            track.mediaRecorder.stop();
-            track.isRecording = false;
-            btn.classList.remove('active');
-            btn.innerText = "REC";
-        } else {
-            // Start Recording
-            // We create a destination to record the Master Output (simplified)
-            // In a real app, you'd use a specific input node. 
-            // Here we will just record silence or use the microphone input if available.
-            // FOR THIS DEMO: We will simulate recording by capturing the Master Output via ScriptProcessor (deprecated but works for demo) 
-            // OR simpler: We assume the user wants to loop the Synth.
-            
-            // Let's use MediaRecorder on the destination stream if supported, 
-            // otherwise we just flag the track as "Armed" to record the next synth note.
-            
-            // *Simplified Approach for Web Demo*: 
-            // We will use the Microphone input for the looper to make it functional immediately.
-            if (!navigator.mediaDevices) {
-                alert("Microphone access needed for Looper!");
-                return;
+        document.addEventListener('keydown', (e) => {
+            if (!audioStarted || pressedKeys.has(e.key)) return;
+            const note = keyMap[e.key.toLowerCase()];
+            if (note) {
+                pressedKeys.add(e.key);
+                document.querySelector(`.key[data-note="${note}"]`)?.classList.add('active');
+                activeInstrument.triggerAttack(note, Tone.now());
             }
-
-            navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-                track.mediaRecorder = new MediaRecorder(stream);
-                track.audioChunks = [];
-                
-                track.mediaRecorder.ondataavailable = event => {
-                    track.audioChunks.push(event.data);
-                };
-
-                track.mediaRecorder.onstop = async () => {
-                    const audioBlob = new Blob(track.audioChunks, { type: 'audio/wav' });
-                    const arrayBuffer = await audioBlob.arrayBuffer();
-                    track.recordedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-                    document.getElementById(`level-${trackId}`).style.width = "100%";
-                    document.getElementById(`level-${trackId}`).style.background = "#00ff9d";
-                };
-
-                track.mediaRecorder.start();
-                track.isRecording = true;
-                btn.classList.add('active');
-                btn.innerText = "STOP";
-            });
-        }
-    }
-
-    function togglePlay(trackId) {
-        const track = tracks[trackId];
-        const btn = document.getElementById(`play-${trackId}`);
-
-        if (track.isPlaying) {
-            if(track.bufferSource) track.bufferSource.stop();
-            track.isPlaying = false;
-            btn.classList.remove('active');
-        } else {
-            if (track.recordedBuffer) {
-                const source = audioCtx.createBufferSource();
-                source.buffer = track.recordedBuffer;
-                source.loop = true;
-                source.connect(masterGain);
-                source.start(0);
-                track.bufferSource = source;
-                track.isPlaying = true;
-                btn.classList.add('active');
-            } else {
-                alert("No audio recorded on this track yet!");
-            }
-        }
-    }
-
-    document.getElementById('clear-loops').addEventListener('click', () => {
-        tracks.forEach((t, i) => {
-            if(t.bufferSource) t.bufferSource.stop();
-            t.recordedBuffer = null;
-            t.isPlaying = false;
-            document.getElementById(`play-${i}`).classList.remove('active');
-            document.getElementById(`level-${i}`).style.width = "0%";
-            document.getElementById(`level-${i}`).style.background = "#444";
         });
-    });
 
-</script>
+        document.addEventListener('keyup', (e) => {
+            const note = keyMap[e.key.toLowerCase()];
+            if (note) {
+                pressedKeys.delete(e.key);
+                document.querySelector(`.key[data-note="${note}"]`)?.classList.remove('active');
+                activeInstrument.triggerRelease(note, Tone.now());
+            }
+        });
+
+    </script>
 </body>
 </html>
